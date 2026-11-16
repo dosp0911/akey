@@ -11,15 +11,16 @@ cask "akey" do
   desc "Local secret store for AI agents (menu bar app + CLI, Touch ID)"
   homepage "https://github.com/__OWNER__/akey"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "akey.app"
   # The app executable is also the CLI (same signature, same keychain access)
   binary "#{appdir}/akey.app/Contents/MacOS/akey"
 
   # Until builds are signed with an Apple Developer ID, the quarantine flag must be removed
-  postflight do
-    system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{appdir}/akey.app"]
+  installed_app = "#{appdir}/akey.app"
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", installed_app], must_succeed: false
   end
 
   uninstall quit: "local.akey"
