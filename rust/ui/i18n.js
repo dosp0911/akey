@@ -38,6 +38,8 @@ const STRINGS = {
   selectedCount: ["{0}개 선택됨", "{0} selected"],
   copySelected: ["복사", "Copy"],
   copySelectedHelp: ["인증 후 .env 형식으로 클립보드에 복사", "Authenticate, then copy to the clipboard in .env format"],
+  searchPlaceholder: ["검색 (이름·메모)", "Search (name, note)"],
+  noMatches: ["\"{0}\" 와 맞는 시크릿이 없습니다", "No secrets match \"{0}\""],
   // 설정 창
   settingsTitle: ["akey 설정", "akey Settings"],
   language: ["언어", "Language"],

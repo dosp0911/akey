@@ -20,6 +20,7 @@ const ui = {
   menuFor: null,         // 허용 메뉴가 열린 이름
   selecting: false,      // 여러 개 골라 복사하는 중
   selected: new Set(),   // 고른 이름
+  query: "",             // 검색어 (이름·메모 부분 일치, 대소문자 무시)
   message: "",
   messageIsError: false,
 };
@@ -97,6 +98,31 @@ async function callQuiet(cmd, args) {
     setMessage(String(err), true);
     return { ok: false };
   }
+}
+
+// 검색어가 이름이나 메모의 일부와 맞는 항목만 (공백으로 나눈 낱말은 모두 맞아야 함)
+function visibleItems() {
+  const words = ui.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return ui.snap.items;
+  return ui.snap.items.filter((i) => {
+    const hay = `${i.name}\n${i.note || ""}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+function searchBox() {
+  let composing = false; // 한글 입력 조합 중에는 다시 그리지 않는다
+  const update = (e) => { ui.query = e.target.value; if (!composing) render(); };
+  return el("label", { class: "search" },
+    el("span", { icon: "search" }),
+    el("input", { type: "search", id: "search", placeholder: t("searchPlaceholder"), value: ui.query,
+      spellcheck: "false", autocomplete: "off",
+      oninput: update,
+      oncompositionstart: () => { composing = true; },
+      oncompositionend: (e) => { composing = false; update(e); },
+      onkeydown: (e) => {
+        if (e.key === "Escape" && ui.query) { e.stopPropagation(); ui.query = ""; render(); }
+      } }));
 }
 
 // ---- 화면 ----
@@ -246,17 +272,18 @@ function exitSelecting() {
 
 // 고르기 모드의 바닥글: 전체 선택 / N개 선택됨 / 취소 / 복사(매번 인증)
 function selectionBar() {
-  const names = ui.snap.items.map((i) => i.name);
+  const names = visibleItems().map((i) => i.name);
   const all = names.length > 0 && names.every((n) => ui.selected.has(n));
   const copy = async () => {
-    const chosen = names.filter((n) => ui.selected.has(n)); // 목록 순서대로
+    // 검색으로 가려진 것도 고른 것은 포함한다 (목록 순서대로)
+    const chosen = ui.snap.items.map((i) => i.name).filter((n) => ui.selected.has(n));
     const { ok } = await call("copy_many", { names: chosen });
     if (ok) exitSelecting();
     await refresh();
   };
   return el("div", { class: "footer selection-bar" },
     el("button", { class: "btn", text: all ? t("clearAll") : t("selectAll"),
-      onclick: () => { all ? ui.selected.clear() : names.forEach((n) => ui.selected.add(n)); render(); } }),
+      onclick: () => { names.forEach((n) => (all ? ui.selected.delete(n) : ui.selected.add(n))); render(); } }),
     el("span", { class: "count", text: t("selectedCount", ui.selected.size) }),
     el("span", { class: "spacer" }),
     el("button", { class: "btn", text: t("cancel"), onclick: () => { exitSelecting(); render(); } }),
@@ -284,11 +311,14 @@ function render() {
   const focusKey = active && active.tagName === "INPUT" ? [...document.querySelectorAll("input")].indexOf(active) : -1;
   const caret = focusKey >= 0 ? active.selectionStart : null;
 
-  const list = s.items.length
-    ? el("div", { class: "list" }, s.items.map(row))
-    : el("div", { class: "list" }, el("div", { class: "empty", text: t("noSecrets") }));
+  const items = visibleItems();
+  const emptyText = s.items.length ? t("noMatches", ui.query.trim()) : t("noSecrets");
+  const list = items.length
+    ? el("div", { class: "list" }, items.map(row))
+    : el("div", { class: "list" }, el("div", { class: "empty", text: emptyText }));
+  const search = s.items.length ? searchBox() : null;
   const hint = ui.selecting ? el("div", { class: "select-hint", text: t("selectHint") }) : null;
-  const parts = ui.selecting ? [header(s), hint, list, footer()] : [header(s), list, addCard(), footer()];
+  const parts = ui.selecting ? [header(s), hint, search, list, footer()] : [header(s), search, list, addCard(), footer()];
   document.getElementById("root").replaceChildren(...parts);
 
   if (focusKey >= 0) {
@@ -326,8 +356,21 @@ listen("akey://hidden", () => {
   ui.editing = null;
   ui.draft = { name: "", value: "", note: "" };
   ui.menuFor = null;
+  ui.query = "";
   exitSelecting();
   render();
+});
+
+// ⌘F / Ctrl+F 또는 / 로 검색칸에 바로 가기
+document.addEventListener("keydown", (e) => {
+  const box = document.getElementById("search");
+  if (!box) return;
+  const typing = document.activeElement && document.activeElement.tagName === "INPUT";
+  if (((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") || (e.key === "/" && !typing)) {
+    e.preventDefault();
+    box.focus();
+    box.select();
+  }
 });
 
 refresh();

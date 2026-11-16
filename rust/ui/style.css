@@ -75,6 +75,20 @@ button.badge { cursor: pointer; }
 .kind-always { --badge: var(--green); }
 .badge.green { --badge: var(--green); }
 
+/* 검색 */
+.search {
+  display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px;
+  border: 1px solid var(--field-border); border-radius: 6px; background: var(--field-bg);
+  color: var(--secondary); cursor: text;
+}
+.search:focus-within { border-color: var(--indigo); box-shadow: 0 0 0 3px color-mix(in srgb, var(--indigo) 18%, transparent); }
+.search svg { width: 13px; height: 13px; flex: none; display: block; }
+.search input {
+  flex: 1; min-width: 0; height: 24px; padding: 0; border: none; background: transparent;
+  outline: none; -webkit-appearance: none; appearance: none; -webkit-user-select: text; user-select: text;
+}
+.search input::-webkit-search-cancel-button { cursor: pointer; }
+
 /* 목록 */
 .list { display: flex; flex-direction: column; gap: 6px; }
 .empty { color: var(--secondary); text-align: center; padding: 12px 0; }
