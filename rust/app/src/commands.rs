@@ -388,8 +388,22 @@ pub fn open_settings(app: AppHandle) {
 /// 팝오버 크기를 내용에 맞춘 뒤 트레이 기준 위치를 다시 잡는다
 #[tauri::command]
 pub fn fit_popover(app: AppHandle, height: f64) {
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.set_size(tauri::LogicalSize::new(540.0, height.clamp(160.0, 900.0)));
+    let Some(w) = app.get_webview_window("main") else { return };
+    let height = height.clamp(160.0, 900.0);
+    // macOS: 크기만 바꾸고 위쪽은 제자리 (아이콘 아래 위치는 띄울 때 정한다)
+    #[cfg(target_os = "macos")]
+    {
+        let win = w.clone();
+        let _ = w.run_on_main_thread(move || {
+            if let Ok(ptr) = win.ns_window() {
+                unsafe { akey_macos::status::resize_popover_keep_top(ptr, 540.0, height) };
+            }
+        });
+        crate::app::wake();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = w.set_size(tauri::LogicalSize::new(540.0, height));
         crate::app::position_popover(&w);
     }
 }

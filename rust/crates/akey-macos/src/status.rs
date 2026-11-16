@@ -289,6 +289,28 @@ pub unsafe fn place_popover_below_status_item(ns_window: *mut std::ffi::c_void) 
     })
 }
 
+/// 팝오버 내용 높이를 바꾼다. 위쪽 왼쪽 모서리는 그대로 둔다 (아래로만 늘거나 줄어든다).
+/// Tauri 의 set_size 는 나중에 따로 적용되고 아래쪽 왼쪽을 기준으로 바뀌어서,
+/// 그 뒤에 위치를 다시 맞추는 사이 창이 엉뚱한 곳(화면 구석)으로 튈 수 있었다. 한 번에 직접 바꾼다.
+///
+/// # Safety
+/// `ns_window` 는 살아 있는 NSWindow 여야 하고 메인 스레드에서 불러야 한다.
+pub unsafe fn resize_popover_keep_top(ns_window: *mut std::ffi::c_void, width: f64, height: f64) {
+    use objc2_foundation::{NSPoint, NSRect, NSSize};
+    if ns_window.is_null() {
+        return;
+    }
+    let w = &*(ns_window as *mut objc2_app_kit::NSWindow);
+    let old = w.frame();
+    let content = w.contentRectForFrameRect(old);
+    let frame_for = w.frameRectForContentRect(NSRect::new(content.origin, NSSize::new(width, height)));
+    let top = old.origin.y + old.size.height;
+    let new = NSRect::new(NSPoint::new(old.origin.x, top - frame_for.size.height), frame_for.size);
+    if (new.size.height - old.size.height).abs() > 0.5 || (new.size.width - old.size.width).abs() > 0.5 {
+        w.setFrame_display(new, true);
+    }
+}
+
 /// 문제 확인용: NSWindow 상태를 글로 돌려준다
 ///
 /// # Safety

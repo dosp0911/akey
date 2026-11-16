@@ -1,7 +1,7 @@
 //! Tauri 앱 조립: 플러그인, 트레이, 팝오버 창 동작, 설정 창
 
 use akey_core::tr;
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_positioner::{Position, WindowExt};
 
@@ -91,22 +91,10 @@ pub fn run() {
         });
 }
 
-pub fn position_popover(window: &WebviewWindow) {
-    // macOS: 방금 누른 메뉴바 아이콘(모니터마다 따로 있음) 바로 아래. macOS 좌표 그대로 놓는다.
-    // Tauri 의 set_position 은 좌표를 바꿔 나중에 적용해서, 모니터가 여럿이면 다른 화면에 놓일 때가 있었다.
-    #[cfg(target_os = "macos")]
-    {
-        let w = window.clone();
-        let _ = window.run_on_main_thread(move || {
-            if let Ok(ptr) = w.ns_window() {
-                let placed = unsafe { akey_macos::status::place_popover_below_status_item(ptr) };
-                debug(&format!("position {placed:?}"));
-            }
-        });
-        wake();
-    }
-    // Windows 작업 표시줄은 보통 아래에 있어 트레이 위로 띄운다
-    #[cfg(not(target_os = "macos"))]
+/// Windows: 작업 표시줄은 보통 아래에 있어 트레이 위로 띄운다.
+/// (macOS 는 show_popover_now 에서 메뉴바 아이콘 아래에 직접 놓는다)
+#[cfg(not(target_os = "macos"))]
+pub fn position_popover(window: &tauri::WebviewWindow) {
     let _ = window.move_window_constrained(Position::TrayCenter);
 }
 
