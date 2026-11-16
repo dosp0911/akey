@@ -22,8 +22,12 @@ AI 코딩 에이전트(Claude Code, Codex, Cursor 등)가 쓰는 API 키와 토�
 ### macOS
 
 ```bash
+brew tap dosp0911/akey
+brew trust dosp0911/akey
 brew install dosp0911/akey/akey
 ```
+
+Homebrew는 직접 신뢰(`brew trust`)한 외부 tap의 Cask만 불러온다.
 
 또는
 

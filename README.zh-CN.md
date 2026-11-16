@@ -22,8 +22,12 @@
 ### macOS
 
 ```bash
+brew tap dosp0911/akey
+brew trust dosp0911/akey
 brew install dosp0911/akey/akey
 ```
+
+Homebrew 只会加载你信任过的第三方 tap 中的 cask，因此需要 `brew trust`。
 
 或者
 

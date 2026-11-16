@@ -22,8 +22,12 @@ A small menu bar (tray) app and CLI that keeps the API keys and tokens used by A
 ### macOS
 
 ```bash
+brew tap dosp0911/akey
+brew trust dosp0911/akey
 brew install dosp0911/akey/akey
 ```
+
+Homebrew only loads casks from third-party taps you have trusted, hence `brew trust`.
 
 or
 
