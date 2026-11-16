@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+PackageIdentifier: akey.akey
+PackageVersion: __VERSION__
+PackageLocale: en-US
+Publisher: akey
+PublisherUrl: https://github.com/__OWNER__
+PackageName: akey
+PackageUrl: https://github.com/__OWNER__/akey
+License: MIT
+ShortDescription: Local secret store for AI coding agents (tray app + CLI, Windows Hello)
+Description: |-
+  akey keeps API keys and tokens used by AI coding agents out of files.
+  Values are protected with DPAPI and Windows Hello, and agents receive them only as
+  environment variables through `akey exec NAME -- command`.
+Moniker: akey
+Tags:
+  - secrets
+  - cli
+  - ai-agents
+  - windows-hello
+ReleaseNotesUrl: https://github.com/__OWNER__/akey/releases/tag/v__VERSION__
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0

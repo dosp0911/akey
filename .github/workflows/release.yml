@@ -1,0 +1,221 @@
+# 태그(v1.2.3)를 올리면 macOS·Windows 빌드 → GitHub Release → Homebrew tap 갱신
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# 기본은 읽기 전용. 빌드 job 은 서드파티 코드(npm, cargo 빌드 스크립트)를 실행하므로 쓰기 권한을 주지 않는다.
+# 쓰기·출처 증명 권한은 release job 에만 준다.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Install Tauri CLI
+        working-directory: rust
+        run: npm ci
+
+      - name: Test
+        working-directory: rust
+        run: cargo test -p akey-core -p akey-windows -p akey-cli
+
+      # 배포용은 임시(ad-hoc) 서명. 설치 스크립트·brew 가 Gatekeeper 격리 표시를 지운다.
+      # Apple Developer ID 를 쓰게 되면 signingIdentity 와 공증 환경변수만 바꾸면 된다.
+      - name: Build universal app
+        working-directory: rust/app
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npx tauri build --target universal-apple-darwin \
+            --config "{\"version\":\"$VERSION\",\"bundle\":{\"macOS\":{\"signingIdentity\":\"-\"}}}"
+
+      - name: Package
+        run: |
+          cd rust/target/universal-apple-darwin/release/bundle/macos
+          tar -czf "$GITHUB_WORKSPACE/akey-macos-universal.tar.gz" akey.app
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos
+          path: akey-macos-universal.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Install Tauri CLI
+        working-directory: rust
+        run: npm ci
+
+      - name: Test
+        working-directory: rust
+        run: cargo test -p akey-core -p akey-windows -p akey-cli
+
+      - name: Build tray app (akey-app.exe)
+        working-directory: rust/app
+        shell: pwsh
+        run: |
+          $version = "$env:GITHUB_REF_NAME".TrimStart("v")
+          $config = '{"version":"' + $version + '"}'
+          npx tauri build --no-bundle --config $config
+
+      - name: Build CLI (akey.exe)
+        working-directory: rust
+        run: cargo build --release -p akey-cli
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item rust/target/release/akey.exe, rust/target/release/akey-app.exe dist/
+          Compress-Archive -Path dist/* -DestinationPath akey-windows-x64.zip
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows
+          path: akey-windows-x64.zip
+
+  release:
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Release 만들기
+      id-token: write      # 출처 증명(attestation) 서명
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Installers and checksums
+        run: |
+          # 설치 스크립트가 이 저장소의 릴리스를 받도록 저장소 이름을 채운다
+          sed "s#__OWNER__/akey#${GITHUB_REPOSITORY}#g" scripts/install.sh > dist/install.sh
+          sed "s#__OWNER__/akey#${GITHUB_REPOSITORY}#g" scripts/install.ps1 > dist/install.ps1
+          cd dist && sha256sum akey-macos-universal.tar.gz akey-windows-x64.zip install.sh install.ps1 > checksums.txt
+          cat checksums.txt
+
+      # Scoop 매니페스트와 winget 매니페스트를 이번 버전 값으로 채운다
+      - name: Render package manifests
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          WIN_SHA=$(grep akey-windows-x64.zip dist/checksums.txt | cut -d' ' -f1)
+          WIN_SHA_UPPER=$(echo "$WIN_SHA" | tr '[:lower:]' '[:upper:]')
+          render() {
+            sed -e "s#__VERSION__#${VERSION}#g" \
+                -e "s#__SHA256_UPPER__#${WIN_SHA_UPPER}#g" \
+                -e "s#__SHA256__#${WIN_SHA}#g" \
+                -e "s#__OWNER__/akey#${GITHUB_REPOSITORY}#g" \
+                -e "s#__OWNER__#${GITHUB_REPOSITORY_OWNER}#g" "$1"
+          }
+          mkdir -p manifests/scoop "manifests/winget/${VERSION}"
+          render packaging/scoop/akey.json > manifests/scoop/akey.json
+          for f in packaging/winget/*.yaml; do
+            name=$(basename "$f" | sed "s#^akey#akey.akey#")
+            render "$f" > "manifests/winget/${VERSION}/${name}"
+          done
+          (cd manifests && zip -qr ../dist/winget-manifests.zip winget)
+          cp manifests/scoop/akey.json dist/akey-scoop.json
+          find manifests -type f
+
+      # 릴리스 파일마다 GitHub 출처 증명을 붙인다. 사용자는 다음으로 이 저장소의 워크플로가 만든 파일인지 확인할 수 있다:
+      #   gh attestation verify akey-macos-universal.tar.gz -R <owner>/akey
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/akey-macos-universal.tar.gz
+            dist/akey-windows-x64.zip
+            dist/install.sh
+            dist/install.ps1
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "akey $GITHUB_REF_NAME" --generate-notes
+
+      # Homebrew tap(<owner>/homebrew-akey) 갱신. 저장소 Secrets 에 HOMEBREW_TAP_TOKEN
+      # (tap 저장소에 contents 쓰기 권한이 있는 토큰)이 있을 때만 실행한다.
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        if: env.TAP_TOKEN != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA=$(grep akey-macos-universal.tar.gz dist/checksums.txt | cut -d' ' -f1)
+          OWNER="${GITHUB_REPOSITORY_OWNER}"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${OWNER}/homebrew-akey.git" tap
+          mkdir -p tap/Casks
+          sed -e "s#__VERSION__#${VERSION}#g" -e "s#__SHA256__#${SHA}#g" -e "s#__OWNER__/akey#${GITHUB_REPOSITORY}#g" \
+            packaging/homebrew/akey.rb > tap/Casks/akey.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/akey.rb
+          git commit -m "akey ${VERSION}"
+          git push
+
+      # Scoop bucket(<owner>/scoop-akey) 갱신. Secrets 에 SCOOP_BUCKET_TOKEN 이 있을 때만.
+      - name: Update Scoop bucket
+        env:
+          BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        if: env.BUCKET_TOKEN != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git clone "https://x-access-token:${BUCKET_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/scoop-akey.git" bucket
+          mkdir -p bucket/bucket
+          cp manifests/scoop/akey.json bucket/bucket/akey.json
+          cd bucket
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/akey.json
+          git commit -m "akey ${VERSION}"
+          git push
+
+  # winget: 첫 버전은 winget-manifests.zip 으로 직접 PR 을 올려 등록해야 한다 (README 참고).
+  # 등록된 뒤에는 Secrets 에 WINGET_TOKEN(public_repo 권한 PAT)을 넣으면 새 버전마다 PR 을 자동으로 보낸다.
+  winget:
+    needs: [release]
+    runs-on: windows-latest
+    steps:
+      - name: Submit winget update
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if (-not $env:WINGET_TOKEN) { Write-Host "WINGET_TOKEN 없음: 건너뜀"; exit 0 }
+          $version = "$env:GITHUB_REF_NAME".TrimStart("v")
+          $id = "akey.akey"
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/akey-windows-x64.zip"
+          # 버전을 고정하고 SHA-256 을 확인한 뒤에만 토큰과 함께 실행한다
+          $wingetcreate = "https://github.com/microsoft/winget-create/releases/download/v1.28.1.0/wingetcreate.exe"
+          $expected = "63d980ba79e97042395bd6eb5992c2db9e01e9e7a8a22958a95c288f27310413"
+          Invoke-WebRequest $wingetcreate -OutFile wingetcreate.exe
+          $actual = (Get-FileHash -Algorithm SHA256 wingetcreate.exe).Hash.ToLower()
+          if ($actual -ne $expected) { throw "wingetcreate.exe 해시 불일치: $actual" }
+          ./wingetcreate.exe update $id --version $version --urls $url --submit --token $env:WINGET_TOKEN

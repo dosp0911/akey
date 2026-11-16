@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+PackageIdentifier: akey.akey
+PackageVersion: __VERSION__
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: akey.exe
+    PortableCommandAlias: akey
+  - RelativeFilePath: akey-app.exe
+    PortableCommandAlias: akey-app
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/__OWNER__/akey/releases/download/v__VERSION__/akey-windows-x64.zip
+    InstallerSha256: __SHA256_UPPER__
+ManifestType: installer
+ManifestVersion: 1.9.0

@@ -1,0 +1,35 @@
+{
+    "version": "__VERSION__",
+    "description": "Local secret store for AI agents (tray app + CLI, Windows Hello)",
+    "homepage": "https://github.com/__OWNER__/akey",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/__OWNER__/akey/releases/download/v__VERSION__/akey-windows-x64.zip",
+            "hash": "__SHA256__"
+        }
+    },
+    "bin": "akey.exe",
+    "shortcuts": [
+        [
+            "akey-app.exe",
+            "akey"
+        ]
+    ],
+    "pre_uninstall": "Get-Process akey-app -ErrorAction SilentlyContinue | Stop-Process -Force",
+    "notes": [
+        "Start 'akey' from the Start menu to show the tray icon.",
+        "Secrets are stored in %LOCALAPPDATA%\\akey and are kept when you uninstall."
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/__OWNER__/akey/releases/download/v$version/akey-windows-x64.zip"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/checksums.txt"
+        }
+    }
+}
