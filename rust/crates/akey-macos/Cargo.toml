@@ -1,0 +1,17 @@
+[package]
+name = "akey-macos"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "akey macOS 저장소: 로그인 키체인 + Touch ID"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+akey-core.workspace = true
+serde_json.workspace = true
+security-framework = "3"
+objc2 = "0.6"
+block2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSArray", "NSLocale", "NSError", "NSData", "NSGeometry", "NSObject"] }
+objc2-local-authentication = { version = "0.3", features = ["LAContext", "LAError", "block2"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSRunningApplication", "NSStatusBar", "NSStatusItem", "NSStatusBarButton", "NSButton", "NSControl", "NSView", "NSResponder", "NSEvent", "NSMenu", "NSMenuItem", "NSImage", "NSWindow", "NSScreen", "NSGraphics", "NSPanel"] }
+plist = "1"

@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/akey-core",
+    "crates/akey-macos",
+    "crates/akey-windows",
+    "crates/akey-cli",
+    "app",
+]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+akey-core = { path = "crates/akey-core" }
+akey-macos = { path = "crates/akey-macos" }
+akey-windows = { path = "crates/akey-windows" }
+akey-cli = { path = "crates/akey-cli" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+dirs = "6"
+
+[profile.release]
+# 시크릿을 다루는 바이너리: 디버그 정보 없이, 작게
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

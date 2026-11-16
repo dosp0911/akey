@@ -1,0 +1,27 @@
+[package]
+name = "akey-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "akey CLI (에이전트용 명령)"
+
+[lib]
+path = "src/lib.rs"
+
+# Windows 콘솔용 akey.exe. macOS 에서는 앱 실행 파일이 CLI 를 겸하므로 이 바이너리는 개발·테스트용이다.
+[[bin]]
+name = "akey"
+path = "src/main.rs"
+
+[dependencies]
+akey-core.workspace = true
+rpassword = "7"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+akey-macos.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+akey-windows.workspace = true

@@ -1,0 +1,189 @@
+/* Swift 판과 같은 색: 앱 아이콘의 남색을 강조에만, 허용 상태는 회색/주황/초록 */
+:root {
+  --indigo: rgb(61, 84, 204);
+  --gold: rgb(237, 179, 51);
+  --green: rgb(51, 166, 107);
+  --orange: rgb(235, 140, 51);
+  --red: rgb(214, 64, 64);
+  --bg: #f6f6f8;
+  --card: rgba(61, 84, 204, 0.05);
+  --card-revealed: rgba(61, 84, 204, 0.10);
+  --text: #1c1c1e;
+  --secondary: #6b6b70;
+  --tertiary: #a8a8ae;
+  --field-bg: #ffffff;
+  --field-border: #d6d6dc;
+  --menu-bg: #ffffff;
+  --menu-hover: rgba(61, 84, 204, 0.10);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #262628;
+    --card: rgba(110, 130, 235, 0.10);
+    --card-revealed: rgba(110, 130, 235, 0.18);
+    --text: #f2f2f4;
+    --secondary: #a3a3aa;
+    --tertiary: #6e6e75;
+    --field-bg: #1c1c1e;
+    --field-border: #48484e;
+    --menu-bg: #323236;
+    --menu-hover: rgba(110, 130, 235, 0.25);
+    --indigo: rgb(120, 140, 245);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.35 var(--sans);
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+button { font: inherit; color: inherit; }
+input { font: inherit; color: var(--text); }
+
+.popover { width: 540px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* 머리글 */
+.header { display: flex; align-items: center; gap: 8px; }
+.header .logo { color: var(--indigo); width: 18px; height: 18px; flex: none; }
+.header .title { font-weight: 600; font-size: 14px; }
+.header .count { font-size: 11px; font-weight: 600; color: var(--secondary); }
+.spacer { flex: 1; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500;
+  padding: 2px 7px; border-radius: 999px; border: none;
+  color: var(--badge, var(--secondary));
+  background: color-mix(in srgb, var(--badge, var(--secondary)) 14%, transparent);
+  white-space: nowrap;
+}
+button.badge { cursor: pointer; }
+.badge svg { width: 11px; height: 11px; }
+.kind-ask { --badge: var(--secondary); }
+.kind-timed { --badge: var(--orange); }
+.kind-always { --badge: var(--green); }
+.badge.green { --badge: var(--green); }
+
+/* 목록 */
+.list { display: flex; flex-direction: column; gap: 6px; }
+.empty { color: var(--secondary); text-align: center; padding: 12px 0; }
+
+.row { padding: 7px 10px; border-radius: 9px; background: var(--card); display: flex; flex-direction: column; gap: 6px; }
+.row.revealed { background: var(--card-revealed); }
+.row-main { display: flex; align-items: center; gap: 8px; }
+.bar { width: 3px; min-height: 30px; align-self: stretch; border-radius: 2px; flex: none; background: color-mix(in srgb, var(--indigo) 50%, transparent); }
+.bar.kind-timed { background: var(--orange); }
+.bar.kind-always { background: var(--green); }
+
+/* 이름은 최대 220px. 더 길면 잘라 내지 않고 두 줄로 (밑줄 사이 어디서든 줄바꿈) */
+.ident { flex: 0 1 220px; min-width: 120px; display: flex; flex-direction: column; gap: 1px; }
+.ident .name {
+  font: 600 13px/1.25 var(--mono); overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ident .note { font-size: 11px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.value {
+  flex: 1 1 80px; min-width: 60px; text-align: left;
+  border: none; background: none; padding: 0; cursor: pointer;
+  font: 12.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--tertiary);
+}
+.row.revealed .value { color: var(--text); -webkit-user-select: text; user-select: text; }
+
+.actions { display: flex; flex: none; }
+.icon-btn {
+  width: 22px; height: 22px; padding: 0; border: none; background: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--secondary); cursor: pointer; border-radius: 5px;
+}
+.icon-btn:hover { background: color-mix(in srgb, var(--secondary) 14%, transparent); }
+.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn.active { color: var(--indigo); }
+.icon-btn.danger { color: color-mix(in srgb, var(--red) 75%, transparent); }
+
+/* 👁 는 마우스를 올렸을 때만 (값이 보이는 중이면 계속). 자리는 항상 차지 */
+.icon-btn.eye { visibility: hidden; }
+.row:hover .icon-btn.eye, .row.revealed .icon-btn.eye { visibility: visible; }
+
+/* 허용 메뉴 */
+.menu-anchor { position: relative; flex: none; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
+  min-width: 150px; padding: 4px; border-radius: 8px;
+  background: var(--menu-bg); box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+}
+.menu button {
+  border: none; background: none; text-align: left; padding: 5px 8px; border-radius: 5px; cursor: pointer;
+}
+.menu button:hover { background: var(--menu-hover); }
+.menu hr { border: none; border-top: 1px solid var(--field-border); margin: 4px 2px; }
+
+/* 수정 패널 */
+.edit { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 0 11px; }
+.edit .line { display: flex; align-items: center; gap: 6px; }
+.edit .line > span { width: 40px; flex: none; }
+.edit .hint { font-size: 11px; color: var(--secondary); }
+
+input[type="text"], input[type="password"] {
+  flex: 1; min-width: 0; height: 24px; padding: 0 7px;
+  border: 1px solid var(--field-border); border-radius: 5px; background: var(--field-bg);
+  outline: none; -webkit-user-select: text; user-select: text;
+}
+input:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px color-mix(in srgb, var(--indigo) 18%, transparent); }
+input.mono { font-family: var(--mono); }
+
+.btn {
+  height: 24px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--field-border); background: var(--field-bg);
+}
+.btn.primary { border: none; background: var(--indigo); color: #fff; font-weight: 500; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+/* 추가 */
+.add { padding: 10px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--indigo) 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
+.add .label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--indigo); }
+.add .label svg { width: 13px; height: 13px; }
+.add .line { display: flex; gap: 6px; align-items: center; }
+.add .line input.name { flex: none; width: 150px; }
+
+/* 바닥글 */
+.footer { display: flex; align-items: center; gap: 4px; }
+.footer .message { font-size: 11px; color: var(--secondary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.footer .message.error { color: var(--red); }
+
+/* 설정 창 */
+.settings { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.group { background: var(--card); border-radius: 10px; padding: 4px 14px; }
+.setting { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.setting + .setting, .setting + .help + .setting { border-top: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent); }
+.setting label { flex: 1; }
+.help { font-size: 11px; color: var(--secondary); padding: 0 0 10px; margin-top: -4px; }
+.help.error { color: var(--red); }
+.help.warning { color: var(--orange); }
+select {
+  font: inherit; color: var(--text); background: var(--field-bg);
+  border: 1px solid var(--field-border); border-radius: 6px; padding: 3px 6px;
+}
+input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--indigo); }
+
+/* 여러 개 골라 복사 */
+.row.selectable { cursor: pointer; }
+.row.selectable:hover { background: var(--card-revealed); }
+.row.selected { background: var(--card-revealed); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--indigo) 45%, transparent); }
+.row.selectable input[type="checkbox"] { width: 15px; height: 15px; flex: none; margin: 0; accent-color: var(--indigo); cursor: pointer; }
+.select-hint { font-size: 11px; color: var(--secondary); padding: 0 2px; }
+.selection-bar { gap: 8px; }
+.selection-bar .count { font-size: 12px; color: var(--secondary); }

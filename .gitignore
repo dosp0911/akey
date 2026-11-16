@@ -1,0 +1,8 @@
+# Rust / Tauri 빌드 결과
+rust/target/
+rust/app/gen/
+
+# 기타
+.DS_Store
+node_modules/
+

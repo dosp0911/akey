@@ -1,0 +1,12 @@
+{
+  "mainBinaryName": "akey-app",
+  "bundle": {
+    "targets": ["nsis"],
+    "externalBin": [],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

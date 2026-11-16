@@ -1,0 +1,33 @@
+[package]
+name = "akey-windows"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "akey Windows 저장소: vault.json + DPAPI + Windows Hello"
+
+[dependencies]
+akey-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+aes-gcm = "0.10"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+hkdf = "0.12"
+sha2 = "0.10"
+zeroize = "1"
+getrandom = "0.3"
+base64 = "0.22"
+dirs.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Foundation",
+    "Security_Credentials",
+    "Security_Cryptography",
+    "Security_Cryptography_Core",
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+    "Win32_System_Console",
+    "Win32_Globalization",
+] }
+windows-future = "0.3"
