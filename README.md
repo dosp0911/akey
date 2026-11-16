@@ -68,6 +68,22 @@ Menu bar (tray) icon:
 - After one authentication, viewing and copying won't ask again for the time you set (30 minutes by default).
 - Deleting, editing (name or value) and changing access always ask.
 
+### Sharing several secrets
+
+To hand a set of keys to a teammate or set up another machine:
+
+1. Click the **select** button (checklist icon) at the bottom of the list.
+2. Tick the secrets you want, or use **Select all**. Clicking anywhere on a row toggles it.
+3. Click **Copy**. akey always asks for authentication here, even while unlocked, then copies them in `.env` format:
+
+```dotenv
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgres://dev:dev@localhost:5432/app
+GREETING="hello world"
+```
+
+Values with spaces, quotes, `$`, backticks or line breaks are quoted and escaped, so the text can be pasted into a `.env` file or loaded with `source` safely. Send it over a private channel (a password manager's sharing, an end-to-end encrypted chat), not a public one.
+
 CLI:
 
 ```text

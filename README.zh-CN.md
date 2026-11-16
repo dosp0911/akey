@@ -68,6 +68,22 @@ irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 - 验证一次后，在设定的时间内（默认 30 分钟）查看和复制都不会再询问。
 - 删除、编辑（名称或值）和更改访问权限每次都会询问。
 
+### 选择多个密钥分享
+
+需要把一组密钥交给同事或配置另一台电脑时：
+
+1. 点击列表底部的清单图标按钮（**Select several to copy**）。
+2. 勾选要分享的密钥，或点击 **Select all**。点击行内任意位置也可以勾选。
+3. 点击 **Copy**。即使已解锁，akey 也**每次都会要求验证**，然后以 `.env` 格式复制到剪贴板：
+
+```dotenv
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgres://dev:dev@localhost:5432/app
+GREETING="hello world"
+```
+
+含有空格、引号、`$`、反引号或换行的值会被加上引号并转义，因此可以直接粘贴到 `.env` 文件中，或用 `source` 安全加载。请通过安全渠道（密码管理器的共享功能、端到端加密的聊天工具等）发送，不要使用公开渠道。
+
 命令行：
 
 ```text
