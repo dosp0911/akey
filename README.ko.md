@@ -40,7 +40,7 @@ curl -fsSL https://github.com/dosp0911/akey/releases/latest/download/install.sh 
 ### Windows
 
 ```powershell
-winget install akey
+winget install Akey
 ```
 
 또는 Scoop
@@ -208,7 +208,7 @@ macOS 로컬 빌드는 `tauri.conf.json`의 `signingIdentity`("akey Local Signin
 |---|---|---|---|
 | Homebrew | `dosp0911/homebrew-akey` 저장소 만들기 | `HOMEBREW_TAP_TOKEN` (tap 저장소 쓰기 권한) | 릴리스마다 `Casks/akey.rb` 자동 갱신 |
 | Scoop | `dosp0911/scoop-akey` 저장소 만들기 | `SCOOP_BUCKET_TOKEN` (bucket 저장소 쓰기 권한) | 릴리스마다 `bucket/akey.json` 자동 갱신 |
-| winget | 첫 릴리스의 `winget-manifests.zip`을 풀어 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)의 `manifests/a/akey/akey/<버전>/`에 넣고 PR을 올린다 (패키지 ID `akey.akey`) (`wingetcreate submit <폴더>`로도 가능) | `WINGET_TOKEN` (`public_repo` 권한 PAT) | 등록된 뒤 릴리스마다 업데이트 PR을 자동으로 보냄 |
+| winget | 첫 릴리스의 `winget-manifests.zip`을 풀어 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)의 `manifests/a/Akey/Akey/<버전>/`에 넣고 PR을 올린다 (패키지 ID `Akey.Akey`) (`wingetcreate submit <폴더>`로도 가능) | `WINGET_TOKEN` (`public_repo` 권한 PAT) | 등록된 뒤 릴리스마다 업데이트 PR을 자동으로 보냄 |
 
 Secret이 없으면 해당 단계는 건너뛴다. winget 심사는 Microsoft가 하며 보통 며칠 걸린다. 서명되지 않은 exe는 SmartScreen 경고와 함께 추가 검토를 받을 수 있다.
 

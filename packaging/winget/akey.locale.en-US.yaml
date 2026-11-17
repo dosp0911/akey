@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
-PackageIdentifier: akey.akey
+PackageIdentifier: Akey.Akey
 PackageVersion: __VERSION__
 PackageLocale: en-US
 Publisher: Akey

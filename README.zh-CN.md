@@ -40,7 +40,7 @@ curl -fsSL https://github.com/dosp0911/akey/releases/latest/download/install.sh 
 ### Windows
 
 ```powershell
-winget install akey
+winget install Akey
 ```
 
 或者使用 Scoop
@@ -208,7 +208,7 @@ cd app && npx tauri build                # macOS: target/release/bundle/macos/Ak
 |---|---|---|---|
 | Homebrew | 创建 `dosp0911/homebrew-akey` 仓库 | `HOMEBREW_TAP_TOKEN`（对 tap 仓库有写权限） | 每次发布自动更新 `Casks/akey.rb` |
 | Scoop | 创建 `dosp0911/scoop-akey` 仓库 | `SCOOP_BUCKET_TOKEN`（对 bucket 仓库有写权限） | 每次发布自动更新 `bucket/akey.json` |
-| winget | 把首个版本的 `winget-manifests.zip` 解压到 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) 的 `manifests/a/akey/akey/<版本>/` 并提交 PR（包 ID 为 `akey.akey`；也可以用 `wingetcreate submit <文件夹>`） | `WINGET_TOKEN`（具有 `public_repo` 权限的 PAT） | 收录后，每次发布会自动提交更新 PR |
+| winget | 把首个版本的 `winget-manifests.zip` 解压到 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) 的 `manifests/a/Akey/Akey/<版本>/` 并提交 PR（包 ID 为 `Akey.Akey`；也可以用 `wingetcreate submit <文件夹>`） | `WINGET_TOKEN`（具有 `public_repo` 权限的 PAT） | 收录后，每次发布会自动提交更新 PR |
 
 缺少对应 Secret 的步骤会被跳过。winget 由 Microsoft 审核，通常需要几天。未签名的可执行文件可能会触发 SmartScreen 警告并接受额外审核。
 

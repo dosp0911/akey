@@ -136,7 +136,7 @@ jobs:
           mkdir -p manifests/scoop "manifests/winget/${VERSION}"
           render packaging/scoop/akey.json > manifests/scoop/akey.json
           for f in packaging/winget/*.yaml; do
-            name=$(basename "$f" | sed "s#^akey#akey.akey#")
+            name=$(basename "$f" | sed "s#^akey#Akey.Akey#")
             render "$f" > "manifests/winget/${VERSION}/${name}"
           done
           (cd manifests && zip -qr ../dist/winget-manifests.zip winget)
@@ -210,7 +210,7 @@ jobs:
         run: |
           if (-not $env:WINGET_TOKEN) { Write-Host "WINGET_TOKEN 없음: 건너뜀"; exit 0 }
           $version = "$env:GITHUB_REF_NAME".TrimStart("v")
-          $id = "akey.akey"
+          $id = "Akey.Akey"
           $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/akey-windows-x64.zip"
           # 버전을 고정하고 SHA-256 을 확인한 뒤에만 토큰과 함께 실행한다
           $wingetcreate = "https://github.com/microsoft/winget-create/releases/download/v1.28.1.0/wingetcreate.exe"

@@ -40,7 +40,7 @@ curl -fsSL https://github.com/dosp0911/akey/releases/latest/download/install.sh 
 ### Windows
 
 ```powershell
-winget install akey
+winget install Akey
 ```
 
 or Scoop
@@ -208,7 +208,7 @@ Local macOS builds are signed with the `signingIdentity` in `tauri.conf.json` ("
 |---|---|---|---|
 | Homebrew | Create the `dosp0911/homebrew-akey` repository | `HOMEBREW_TAP_TOKEN` (write access to the tap repository) | `Casks/akey.rb` is updated on every release |
 | Scoop | Create the `dosp0911/scoop-akey` repository | `SCOOP_BUCKET_TOKEN` (write access to the bucket repository) | `bucket/akey.json` is updated on every release |
-| winget | Unzip the first release's `winget-manifests.zip` into `manifests/a/akey/akey/<version>/` of [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) and open a PR (package ID `akey.akey`; `wingetcreate submit <folder>` also works) | `WINGET_TOKEN` (PAT with `public_repo`) | Once accepted, an update PR is sent on every release |
+| winget | Unzip the first release's `winget-manifests.zip` into `manifests/a/Akey/Akey/<version>/` of [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) and open a PR (package ID `Akey.Akey`; `wingetcreate submit <folder>` also works) | `WINGET_TOKEN` (PAT with `public_repo`) | Once accepted, an update PR is sent on every release |
 
 Steps whose secret is missing are skipped. Microsoft reviews winget submissions, which usually takes a few days. Unsigned executables may get extra review along with a SmartScreen warning.
 
