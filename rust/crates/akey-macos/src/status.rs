@@ -311,6 +311,40 @@ pub unsafe fn resize_popover_keep_top(ns_window: *mut std::ffi::c_void, width: f
     }
 }
 
+/// 창을 마우스가 있는 화면(방금 누른 곳)의 가운데에 놓는다.
+/// Tauri 의 center() 는 주 모니터에 놓아서, 다른 모니터의 메뉴바에서 연 설정 창이 엉뚱한 화면에 떴다.
+///
+/// # Safety
+/// `ns_window` 는 살아 있는 NSWindow 여야 하고 메인 스레드에서 불러야 한다.
+pub unsafe fn center_on_mouse_screen(ns_window: *mut std::ffi::c_void) {
+    use objc2_app_kit::NSEvent;
+    use objc2_foundation::NSPoint;
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    if ns_window.is_null() {
+        return;
+    }
+    let w = &*(ns_window as *mut objc2_app_kit::NSWindow);
+    let mouse = NSEvent::mouseLocation();
+    let screens = NSScreen::screens(mtm);
+    let screen = screens
+        .iter()
+        .find(|s| {
+            let f = s.frame();
+            mouse.x >= f.origin.x
+                && mouse.x <= f.origin.x + f.size.width
+                && mouse.y >= f.origin.y
+                && mouse.y <= f.origin.y + f.size.height
+        })
+        .or_else(|| NSScreen::mainScreen(mtm));
+    let Some(screen) = screen else { return };
+    let area = screen.visibleFrame();
+    let frame = w.frame();
+    let x = area.origin.x + (area.size.width - frame.size.width) / 2.0;
+    // 가운데보다 약간 위 (macOS 기본 창 위치와 비슷하게)
+    let y = area.origin.y + (area.size.height - frame.size.height) * 0.6;
+    w.setFrameOrigin(NSPoint::new(x.round(), y.round()));
+}
+
 /// 문제 확인용: NSWindow 상태를 글로 돌려준다
 ///
 /// # Safety

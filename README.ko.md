@@ -70,7 +70,7 @@ irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 
 메뉴바(트레이) 아이콘 사용법:
 - **왼쪽 클릭**: 시크릿 목록이 열린다. 값은 가려져 있고, 값이나 👁를 누르면 인증 뒤 보인다.
-- **오른쪽 클릭**: 정보 / 설정 / 종료.
+- **오른쪽 클릭**: 정보 / 설정 / 종료. 앱과 CLI는 한국어, 영어, 중국어(간체)를 지원한다 (설정 → 언어).
 - **묶음**: 위쪽의 동그라미 7개로 시크릿을 나눠 관리한다(개인, 회사, 프로젝트 등). 동그라미를 누르면 그 묶음만 보이고, 묶음 이름을 누르면 이름을 바꿀 수 있다. 새 시크릿은 지금 보고 있는 묶음에 들어가고, ✏️ → 묶음에서 옮긴다. 검색은 모든 묶음에서 찾는다.
 - **잠금 배지**: **잠김**을 누르면 인증 뒤 모든 값이 한꺼번에 보이고, **잠금 해제됨**을 누르면 모두 가리고 다시 잠긴다.
 - **에이전트 접근**(오른쪽 위): 시크릿별 / 8시간 전체 / 항상 전체. 켤 때는 인증을 묻는다.
@@ -190,7 +190,7 @@ cargo test -p akey-core -p akey-windows -p akey-cli
 cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
-- `rust/crates/akey-core`: 금고 모델, 허용 계산, 설정, 한국어/영어
+- `rust/crates/akey-core`: 금고 모델, 허용 계산, 설정, 한국어/영어/중국어 문구
 - `rust/crates/akey-macos`: 키체인 + Touch ID
 - `rust/crates/akey-windows`: vault.json + DPAPI + Windows Hello (`engine.rs`는 운영체제와 무관하게 테스트됨)
 - `rust/crates/akey-cli`: CLI

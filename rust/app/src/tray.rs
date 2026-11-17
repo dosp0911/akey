@@ -32,15 +32,16 @@ mod imp {
                     crate::app::debug("status right click");
                     crate::app::hide_popover(&handle);
                     status::show_menu(&[
-                        (MENU_ABOUT, tr("Akey 정보", "About Akey")),
-                        (MENU_SETTINGS, tr("설정…", "Settings…")),
+                        (MENU_ABOUT, tr("Akey 정보", "About Akey", "关于 Akey")),
+                        (MENU_SETTINGS, tr("설정…", "Settings…", "设置…")),
                         (0, String::new()),
-                        (MENU_QUIT, tr("종료", "Quit")),
+                        (MENU_QUIT, tr("종료", "Quit", "退出")),
                     ]);
                 }
                 StatusEvent::MenuItem(MENU_ABOUT) => status::show_about(&tr(
                     "Agent key: AI 에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
                     "Agent key: a local secret store for AI agents.\nValues are kept only on this computer.",
+                    "Agent key：AI 助手的本地密钥存储。\n值只保存在这台电脑上。",
                 )),
                 StatusEvent::MenuItem(MENU_SETTINGS) => crate::app::open_settings(&handle),
                 StatusEvent::MenuItem(MENU_QUIT) => handle.exit(0),
@@ -68,20 +69,21 @@ mod imp {
     fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         let about = PredefinedMenuItem::about(
             app,
-            Some(&tr("Akey 정보", "About Akey")),
+            Some(&tr("Akey 정보", "About Akey", "关于 Akey")),
             Some(AboutMetadata {
                 name: Some("Akey".into()),
                 version: Some(app.package_info().version.to_string()),
                 comments: Some(tr(
                     "Agent key: AI 에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
                     "Agent key: a local secret store for AI agents.\nValues are kept only on this computer.",
+                    "Agent key：AI 助手的本地密钥存储。\n值只保存在这台电脑上。",
                 )),
                 ..Default::default()
             }),
         )?;
-        let settings = MenuItem::with_id(app, "settings", tr("설정…", "Settings…"), true, None::<&str>)?;
+        let settings = MenuItem::with_id(app, "settings", tr("설정…", "Settings…", "设置…"), true, None::<&str>)?;
         let separator = PredefinedMenuItem::separator(app)?;
-        let quit = MenuItem::with_id(app, "quit", tr("종료", "Quit"), true, None::<&str>)?;
+        let quit = MenuItem::with_id(app, "quit", tr("종료", "Quit", "退出"), true, None::<&str>)?;
         Menu::with_items(app, &[&about, &settings, &separator, &quit])
     }
 

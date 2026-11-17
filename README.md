@@ -70,7 +70,7 @@ On macOS this installs `/Applications/Akey.app` and the `akey` command. On Windo
 
 Menu bar (tray) icon:
 - **Left click**: opens the list of secrets. Values are masked; click a value or 👁 to reveal it after authenticating.
-- **Right click**: About / Settings / Quit.
+- **Right click**: About / Settings / Quit. The app and CLI speak English, Korean and Simplified Chinese (Settings → Language).
 - **Groups**: the seven circles at the top split your secrets into groups (personal, work, a project…). Click a circle to see that group; click the group name to rename it. New secrets go into the group you're looking at; move one with ✏️ → Group. Search looks through every group.
 - **Lock badge**: click **Locked** to authenticate and show every value at once; click **Unlocked** to hide them all and lock again.
 - **Agent access** (top right): per secret / all secrets for 8 hours / all secrets always. Turning it on asks for authentication.
@@ -190,7 +190,7 @@ cargo test -p akey-core -p akey-windows -p akey-cli
 cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
-- `rust/crates/akey-core`: vault model, access rules, settings, Korean/English text
+- `rust/crates/akey-core`: vault model, access rules, settings, Korean/English/Chinese text
 - `rust/crates/akey-macos`: keychain + Touch ID
 - `rust/crates/akey-windows`: vault.json + DPAPI + Windows Hello (`engine.rs` is tested on any OS)
 - `rust/crates/akey-cli`: CLI

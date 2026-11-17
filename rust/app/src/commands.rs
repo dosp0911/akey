@@ -15,7 +15,7 @@ fn e(err: Error) -> String {
 }
 
 fn cancelled() -> String {
-    tr("취소됨", "Cancelled")
+    tr("취소됨", "Cancelled", "已取消")
 }
 
 fn changed(app: &AppHandle) {
@@ -96,12 +96,12 @@ pub fn snapshot(state: State<'_, AppState>) -> Snapshot {
 
 fn keep_note(state: &AppState) -> String {
     let m = state.settings().unlock_minutes;
-    tr(&format!("{m}분간 다시 묻지 않음"), &format!("won't ask again for {m} min"))
+    tr(&format!("{m}분간 다시 묻지 않음"), &format!("won't ask again for {m} min"), &format!("{m} 分钟内不再询问"))
 }
 
 #[tauri::command]
 pub async fn reveal(app: AppHandle, state: State<'_, AppState>, name: String) -> CmdResult<String> {
-    let reason = tr(&format!("시크릿 값을 보려고 합니다 ({})", keep_note(&state)), &format!("view a secret value ({})", keep_note(&state)));
+    let reason = tr(&format!("시크릿 값을 보려고 합니다 ({})", keep_note(&state)), &format!("view a secret value ({})", keep_note(&state)), &format!("查看密钥值（{}）", keep_note(&state)));
     if !state.unlock(&app, reason).await {
         return Err(cancelled());
     }
@@ -117,6 +117,7 @@ pub async fn reveal_all(
     let reason = tr(
         &format!("모든 시크릿 값을 보려고 합니다 ({})", keep_note(&state)),
         &format!("show all secret values ({})", keep_note(&state)),
+        &format!("显示所有密钥值（{}）", keep_note(&state)),
     );
     if !state.unlock(&app, reason).await {
         return Err(cancelled());
@@ -135,13 +136,14 @@ pub async fn copy(app: AppHandle, state: State<'_, AppState>, name: String) -> C
     let reason = tr(
         &format!("'{name}' 시크릿을 복사하려고 합니다 ({})", keep_note(&state)),
         &format!("copy '{name}' ({})", keep_note(&state)),
+        &format!("复制 '{name}'（{}）", keep_note(&state)),
     );
     if !state.unlock(&app, reason).await {
         return Err(cancelled());
     }
     let value = state.store.get(&name).map_err(e)?;
     crate::platform::copy_to_clipboard(&value, state.settings().conceal_clipboard)?;
-    Ok(tr(&format!("복사됨: {name}"), &format!("Copied: {name}")))
+    Ok(tr(&format!("복사됨: {name}"), &format!("Copied: {name}"), &format!("已复制：{name}")))
 }
 
 /// 여러 시크릿을 `.env` 형식(NAME=value 줄)으로 한 번에 복사한다 (다른 사람에게 공유용).
@@ -149,13 +151,14 @@ pub async fn copy(app: AppHandle, state: State<'_, AppState>, name: String) -> C
 #[tauri::command]
 pub async fn copy_many(app: AppHandle, state: State<'_, AppState>, names: Vec<String>) -> CmdResult<String> {
     if names.is_empty() {
-        return Err(tr("복사할 시크릿을 고르세요", "Select secrets to copy"));
+        return Err(tr("복사할 시크릿을 고르세요", "Select secrets to copy", "请选择要复制的密钥"));
     }
     let n = names.len();
     let list = names.join(", ");
     let reason = tr(
         &format!("시크릿 {n}개를 공유용으로 복사하려고 합니다: {list}"),
         &format!("copy {n} secrets for sharing: {list}"),
+        &format!("复制 {n} 个密钥用于分享：{list}"),
     );
     if !state.confirm(&app, reason).await {
         return Err(cancelled());
@@ -167,7 +170,7 @@ pub async fn copy_many(app: AppHandle, state: State<'_, AppState>, names: Vec<St
     state.relock_if_no_session();
     let pairs = result.map_err(e)?;
     crate::platform::copy_to_clipboard(&akey_core::dotenv::format(&pairs), state.settings().conceal_clipboard)?;
-    Ok(tr(&format!("{n}개 복사됨 (.env 형식)"), &format!("Copied {n} secrets (.env format)")))
+    Ok(tr(&format!("{n}개 복사됨 (.env 형식)"), &format!("Copied {n} secrets (.env format)"), &format!("已复制 {n} 个密钥（.env 格式）")))
 }
 
 #[tauri::command]
@@ -187,14 +190,14 @@ pub async fn add(
 ) -> CmdResult<String> {
     let name = name.trim().to_string();
     if !is_valid_name(&name) {
-        return Err(tr("이름은 영문/숫자/_ 만 가능합니다", "Names may use letters, digits and _ only"));
+        return Err(tr("이름은 영문/숫자/_ 만 가능합니다", "Names may use letters, digits and _ only", "名称只能使用字母、数字和 _"));
     }
     if value.is_empty() {
-        return Err(tr("값이 비어 있습니다", "The value is empty"));
+        return Err(tr("값이 비어 있습니다", "The value is empty", "值为空"));
     }
     let exists = state.store.exists(&name).map_err(e)?;
     if exists {
-        if !state.confirm(&app, tr(&format!("'{name}' 시크릿을 덮어쓰려고 합니다"), &format!("overwrite '{name}'"))).await {
+        if !state.confirm(&app, tr(&format!("'{name}' 시크릿을 덮어쓰려고 합니다"), &format!("overwrite '{name}'"), &format!("覆盖 '{name}'"))).await {
             return Err(cancelled());
         }
     }
@@ -213,7 +216,7 @@ pub async fn add(
     state.relock_if_no_session();
     result.map_err(e)?;
     changed(&app);
-    Ok(tr(&format!("저장됨: {name}"), &format!("Saved: {name}")))
+    Ok(tr(&format!("저장됨: {name}"), &format!("Saved: {name}"), &format!("已保存：{name}")))
 }
 
 /// 수정 저장. 이름이나 값이 바뀌면 매번 인증, 메모만 바뀌면 인증 없음. value 가 비면 값 유지.
@@ -231,10 +234,11 @@ pub async fn save_edit(
         return Err(tr(
             "이름은 영문/숫자/_ 만 가능합니다 (숫자로 시작 불가)",
             "Names may use letters, digits and _ only (not starting with a digit)",
+            "名称只能使用字母、数字和 _（不能以数字开头）",
         ));
     }
     if new_name != original && state.store.exists(&new_name).map_err(e)? {
-        return Err(tr(&format!("'{new_name}' 이(가) 이미 있습니다"), &format!("'{new_name}' already exists")));
+        return Err(tr(&format!("'{new_name}' 이(가) 이미 있습니다"), &format!("'{new_name}' already exists"), &format!("'{new_name}' 已存在")));
     }
     let renaming = new_name != original;
     let changing_value = !value.is_empty();
@@ -243,12 +247,14 @@ pub async fn save_edit(
             (true, true) => tr(
                 &format!("'{original}' 시크릿의 이름을 '{new_name}'(으)로, 값을 바꾸려고 합니다"),
                 &format!("rename '{original}' to '{new_name}' and change its value"),
+                &format!("将 '{original}' 重命名为 '{new_name}' 并修改其值"),
             ),
             (true, false) => tr(
                 &format!("'{original}' 시크릿의 이름을 '{new_name}'(으)로 바꾸려고 합니다"),
                 &format!("rename '{original}' to '{new_name}'"),
+                &format!("将 '{original}' 重命名为 '{new_name}'"),
             ),
-            _ => tr(&format!("'{original}' 시크릿의 값을 바꾸려고 합니다"), &format!("change the value of '{original}'")),
+            _ => tr(&format!("'{original}' 시크릿의 값을 바꾸려고 합니다"), &format!("change the value of '{original}'"), &format!("修改 '{original}' 的值")),
         };
         if !state.confirm(&app, reason).await {
             return Err(cancelled());
@@ -260,19 +266,19 @@ pub async fn save_edit(
     }
     result.map_err(e)?;
     changed(&app);
-    Ok(tr(&format!("수정됨: {new_name}"), &format!("Updated: {new_name}")))
+    Ok(tr(&format!("수정됨: {new_name}"), &format!("Updated: {new_name}"), &format!("已更新：{new_name}")))
 }
 
 #[tauri::command]
 pub async fn remove(app: AppHandle, state: State<'_, AppState>, name: String) -> CmdResult<String> {
-    if !state.confirm(&app, tr(&format!("'{name}' 시크릿을 삭제하려고 합니다"), &format!("delete '{name}'"))).await {
+    if !state.confirm(&app, tr(&format!("'{name}' 시크릿을 삭제하려고 합니다"), &format!("delete '{name}'"), &format!("删除 '{name}'"))).await {
         return Err(cancelled());
     }
     let result = state.store.remove(&name);
     state.relock_if_no_session();
     result.map_err(e)?;
     changed(&app);
-    Ok(tr(&format!("삭제됨: {name}"), &format!("Deleted: {name}")))
+    Ok(tr(&format!("삭제됨: {name}"), &format!("Deleted: {name}"), &format!("已删除：{name}")))
 }
 
 /// 시크릿을 다른 묶음(동그라미)으로 옮긴다. 정리일 뿐이라 인증은 묻지 않는다.
@@ -292,9 +298,9 @@ pub fn set_group_name(app: AppHandle, state: State<'_, AppState>, group: u8, lab
 
 fn duration_label(hours: f64) -> String {
     if hours == 0.0 {
-        tr("무기한", "no expiry")
+        tr("무기한", "no expiry", "不过期")
     } else {
-        tr(&format!("{}시간", hours as u64), &format!("{} hours", hours as u64))
+        tr(&format!("{}시간", hours as u64), &format!("{} hours", hours as u64), &format!("{} 小时", hours as u64))
     }
 }
 
@@ -307,6 +313,7 @@ pub async fn set_grant(app: AppHandle, state: State<'_, AppState>, name: String,
             let reason = tr(
                 &format!("'{name}' 시크릿을 인증 없이 읽도록 허용({label})하려고 합니다"),
                 &format!("let agents read '{name}' without asking ({label})"),
+                &format!("允许助手无需验证读取 '{name}'（{label}）"),
             );
             if !state.confirm(&app, reason).await {
                 return Err(cancelled());
@@ -331,6 +338,7 @@ pub async fn set_all_grant(app: AppHandle, state: State<'_, AppState>, hours: Op
             let reason = tr(
                 &format!("모든 시크릿(앞으로 추가될 것 포함)을 인증 없이 읽도록 허용({label})하려고 합니다"),
                 &format!("let agents read every secret, including future ones, without asking ({label})"),
+                &format!("允许助手无需验证读取所有密钥（包括以后添加的）（{label}）"),
             );
             if !state.confirm(&app, reason).await {
                 return Err(cancelled());
@@ -339,11 +347,11 @@ pub async fn set_all_grant(app: AppHandle, state: State<'_, AppState>, hours: Op
             let result = state.store.set_all_grant(Some(until));
             state.relock_if_no_session();
             result.map_err(e)?;
-            tr(&format!("전체 허용됨 ({label})"), &format!("All allowed ({label})"))
+            tr(&format!("전체 허용됨 ({label})"), &format!("All allowed ({label})"), &format!("已全部允许（{label}）"))
         }
         None => {
             state.store.unset_all_grant().map_err(e)?;
-            tr("전체 허용 꺼짐 (시크릿별 설정은 유지)", "All-access off (per-secret access kept)")
+            tr("전체 허용 꺼짐 (시크릿별 설정은 유지)", "All-access off (per-secret access kept)", "已关闭全部允许（保留按密钥设置）")
         }
     };
     changed(&app);
@@ -355,7 +363,7 @@ pub async fn set_all_grant(app: AppHandle, state: State<'_, AppState>, hours: Op
 pub fn revoke_all_grants(app: AppHandle, state: State<'_, AppState>) -> CmdResult<String> {
     state.store.set_all_grant(None).map_err(e)?;
     changed(&app);
-    Ok(tr("모든 허용 해제: 전부 매번 묻기", "All access revoked: every secret asks again"))
+    Ok(tr("모든 허용 해제: 전부 매번 묻기", "All access revoked: every secret asks again", "已撤销全部访问：所有密钥恢复每次询问"))
 }
 
 // MARK: 설정
@@ -403,7 +411,7 @@ pub fn set_language(app: AppHandle, state: State<'_, AppState>, code: String) ->
     akey_core::i18n::set_lang(lang);
     crate::tray::refresh_menu(&app);
     if let Some(w) = app.get_webview_window("settings") {
-        let _ = w.set_title(&tr("Akey 설정", "Akey Settings"));
+        let _ = w.set_title(&tr("Akey 설정", "Akey Settings", "Akey 设置"));
     }
     changed(&app);
     Ok(())

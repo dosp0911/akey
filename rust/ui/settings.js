@@ -34,7 +34,7 @@ async function render() {
   const general = el("section", { class: "group" },
     el("div", { class: "setting" },
       el("label", { for: "lang", text: t("language") }),
-      select("lang", [["ko", "한국어"], ["en", "English"]], s.language, async (v) => {
+      select("lang", [["ko", "한국어"], ["en", "English"], ["zh", "简体中文"]], s.language, async (v) => {
         await invoke("set_language", { code: v });
       })),
     el("div", { class: "help", text: t("languageHelp") }));

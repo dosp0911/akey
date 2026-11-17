@@ -18,7 +18,7 @@ use crate::engine::Platform;
 const KEY_NAME: &str = "akey";
 
 fn win(e: windows::core::Error) -> Error {
-    Error::Backend(tr(&format!("Windows 오류: {e}"), &format!("Windows error: {e}")))
+    Error::Backend(tr(&format!("Windows 오류: {e}"), &format!("Windows error: {e}"), &format!("Windows 错误：{e}")))
 }
 
 fn blob(data: &[u8]) -> CRYPT_INTEGER_BLOB {
@@ -51,6 +51,7 @@ impl WinPlatform {
             return Err(Error::Backend(tr(
                 "Windows Hello 가 설정되어 있지 않습니다. 설정 → 계정 → 로그인 옵션에서 PIN 이나 지문을 먼저 설정하세요",
                 "Windows Hello isn't set up. Set a PIN or fingerprint in Settings → Accounts → Sign-in options first",
+                "尚未设置 Windows Hello。请先在 设置 → 帐户 → 登录选项 中设置 PIN 或指纹",
             )));
         }
         let name = HSTRING::from(KEY_NAME);
@@ -67,10 +68,12 @@ impl WinPlatform {
             KeyCredentialStatus::NotFound => Err(Error::Backend(tr(
                 "Windows Hello 키가 없습니다. 'akey' 키가 지워졌다면 '매번 묻기' 값은 복구할 수 없습니다",
                 "The Windows Hello key is missing. If the 'akey' key was deleted, 'ask every time' values can't be recovered",
+                "找不到 Windows Hello 密钥。如果 'akey' 密钥已被删除，“每次询问”的值将无法恢复",
             ))),
             other => Err(Error::Backend(tr(
                 &format!("Windows Hello 오류 (상태 {})", other.0),
                 &format!("Windows Hello error (status {})", other.0),
+                &format!("Windows Hello 错误（状态 {}）", other.0),
             ))),
         }
     }
@@ -107,13 +110,14 @@ impl Platform for WinPlatform {
             other => Err(Error::Backend(tr(
                 &format!("Windows Hello 서명 오류 (상태 {})", other.0),
                 &format!("Windows Hello signing error (status {})", other.0),
+                &format!("Windows Hello 签名错误（状态 {}）", other.0),
             ))),
         }
     }
 
     fn announce(&self, reason: &str) {
         // 콘솔(akey.exe)에서는 Hello 창 전에 무엇을 승인하는지 보여 준다. 트레이 앱은 콘솔이 없어 무시된다.
-        eprintln!("akey: {} — {reason}", tr("Windows Hello 확인", "Windows Hello confirmation"));
+        eprintln!("akey: {} — {reason}", tr("Windows Hello 확인", "Windows Hello confirmation", "Windows Hello 验证"));
     }
 
     fn hello_verify(&self, challenge: &[u8], signature: &[u8]) -> Result<bool> {

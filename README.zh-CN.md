@@ -70,7 +70,7 @@ irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 
 菜单栏（托盘）图标：
 - **左键点击**：打开密钥列表。值默认隐藏，点击值或 👁 并通过验证后显示。
-- **右键点击**：关于 / 设置 / 退出。
+- **右键点击**：关于 / 设置 / 退出。应用和命令行支持简体中文、英语和韩语（设置 → 语言）。
 - **分组**：顶部的 7 个圆点把密钥分成不同的组（个人、工作、项目等）。点击圆点只显示该组，点击组名可以重命名。新密钥会放进当前查看的组，可通过 ✏️ → 分组移动。搜索会查找所有组。
 - **锁定徽章**：点击 **已锁定** 并通过验证后一次显示所有值；点击 **已解锁** 会隐藏所有值并重新锁定。
 - **助手访问**（右上角）：按密钥 / 8 小时全部 / 始终全部。开启时需要验证。
@@ -190,7 +190,7 @@ cargo test -p akey-core -p akey-windows -p akey-cli
 cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
-- `rust/crates/akey-core`：保险库模型、访问规则、设置、韩语/英语文本
+- `rust/crates/akey-core`：保险库模型、访问规则、设置、韩语/英语/中文文本
 - `rust/crates/akey-macos`：钥匙串 + Touch ID
 - `rust/crates/akey-windows`：vault.json + DPAPI + Windows Hello（`engine.rs` 可在任何系统上测试）
 - `rust/crates/akey-cli`：命令行

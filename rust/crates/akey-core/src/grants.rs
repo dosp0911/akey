@@ -38,10 +38,10 @@ pub fn is_granted(name: &str, grants: &Grants, now: f64) -> bool {
 
 /// 남은 시간은 올림: 8시간 허용 직후에 "7시간 남음"으로 보이지 않게
 pub fn label(until: Option<f64>, now: f64) -> String {
-    let ask = tr("매번 묻기", "Ask every time");
+    let ask = tr("매번 묻기", "Ask every time", "每次询问");
     let Some(until) = until else { return ask };
     if until == 0.0 {
-        return tr("항상 허용", "Always allowed");
+        return tr("항상 허용", "Always allowed", "始终允许");
     }
     let remaining = until - now;
     if remaining <= 0.0 {
@@ -49,10 +49,10 @@ pub fn label(until: Option<f64>, now: f64) -> String {
     }
     if remaining >= 3600.0 {
         let hours = (remaining / 3600.0).ceil() as u64;
-        return tr(&format!("{hours}시간 남음"), &format!("{hours}h left"));
+        return tr(&format!("{hours}시간 남음"), &format!("{hours}h left"), &format!("剩余 {hours} 小时"));
     }
     let minutes = (remaining / 60.0).ceil() as u64;
-    tr(&format!("{minutes}분 남음"), &format!("{minutes}m left"))
+    tr(&format!("{minutes}분 남음"), &format!("{minutes}m left"), &format!("剩余 {minutes} 分钟"))
 }
 
 pub fn grant_label(name: &str, grants: &Grants, now: f64) -> String {
@@ -61,7 +61,7 @@ pub fn grant_label(name: &str, grants: &Grants, now: f64) -> String {
     // 개별 허용은 없고 전체 허용 때문에 열려 있으면 표시
     let own = grants.get(name).copied().filter(|u| active(*u, now));
     if own.is_none() && effective.is_some() {
-        return text + &tr(" (전체)", " (all)");
+        return text + &tr(" (전체)", " (all)", "（全部）");
     }
     text
 }
@@ -124,6 +124,14 @@ mod tests {
         assert!(!is_granted("X", &expired_all, now));
         assert_eq!(all_grant_label(&expired_all, now), None);
         assert_eq!(expired(&expired_all, now), vec!["*".to_string()]);
+    }
+
+    #[test]
+    fn chinese_labels() {
+        let _g = lang_guard(Lang::Zh);
+        let now = 0.0;
+        assert_eq!(label(Some(3600.0 * 3.0), now), "剩余 3 小时");
+        assert_eq!(label(None, now), "每次询问");
     }
 
     #[test]

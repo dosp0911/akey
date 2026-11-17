@@ -49,6 +49,25 @@ allow, rm, mv, overwriting and changing a note always ask.
 Adding a new secret (set) doesn't ask. Agents should pipe the value, never put it on the command line:
   printf %s \"$VALUE\" | akey set NAME
 Change the output language from the menu bar (tray) icon: right-click → Settings.",
+        "用法：
+  akey list                         名称、访问状态和备注（从不显示值）
+  akey exec NAME... -- CMD...       以环境变量注入后运行 CMD（推荐助手使用，输出中的值显示为 ***）
+  akey get NAME                     输出值
+  akey set NAME [--note 备注]       保存或更新（隐藏输入或 stdin）
+  akey note NAME [备注]             查看 / 写入备注（写入需要验证）
+  akey note NAME --clear            清除备注
+  akey rm NAME                      删除
+  akey mv OLD NEW                   重命名（保留值、备注和访问权限）
+  akey allow NAME [--hours N]       允许助手无需验证即可读取（省略 N 表示不过期）
+  akey allow --all [--hours N]      允许所有密钥（包括以后添加的）
+  akey deny NAME                    撤销访问（恢复每次询问）
+  akey deny --all                   撤销全部访问和每个密钥的访问
+
+get/exec 读取未被允许的密钥时会要求 Touch ID / Windows Hello（或登录密码）。
+allow、rm、mv、覆盖和修改备注每次都需要验证。
+添加新密钥（set）无需验证。助手应通过管道传入值，不要写在命令行中：
+  printf %s \"$VALUE\" | akey set NAME
+输出语言可在菜单栏（托盘）图标上右键 → 设置中更改。",
     )
 }
 
@@ -74,7 +93,7 @@ fn bad() -> i32 {
 }
 
 fn denied() -> i32 {
-    err(&tr("인증 실패 또는 취소됨", "Authentication failed or cancelled"));
+    err(&tr("인증 실패 또는 취소됨", "Authentication failed or cancelled", "验证失败或已取消"));
     EXIT_DENIED
 }
 
@@ -86,7 +105,7 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             let grants = store.grants();
             let t = now();
             if let Some(all) = grants::all_grant_label(&grants, t) {
-                println!("{}", tr(&format!("# 전체 허용: {all}"), &format!("# All allowed: {all}")));
+                println!("{}", tr(&format!("# 전체 허용: {all}"), &format!("# All allowed: {all}"), &format!("# 全部允许：{all}")));
             }
             let notes = store.notes()?;
             for name in store.names()? {
@@ -114,15 +133,15 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             }
             // 기존 시크릿의 메모는 사용자가 허용 여부를 판단할 때 보는 정보라, 에이전트가 몰래 바꾸지
             // 못하게 인증을 받는다 (새 시크릿을 등록하며 쓰는 `set --note` 는 인증 없음)
-            if !store.authenticate(&tr(&format!("'{name}' 시크릿의 메모를 바꾸려고 합니다"), &format!("change the note of '{name}'"))) {
+            if !store.authenticate(&tr(&format!("'{name}' 시크릿의 메모를 바꾸려고 합니다"), &format!("change the note of '{name}'"), &format!("修改 '{name}' 的备注"))) {
                 return Ok(denied());
             }
             if text == ["--clear"] {
                 store.set_note(name, None)?;
-                err(&tr(&format!("메모 지움: {name}"), &format!("Note cleared: {name}")));
+                err(&tr(&format!("메모 지움: {name}"), &format!("Note cleared: {name}"), &format!("已清除备注：{name}")));
             } else {
                 store.set_note(name, Some(&text.join(" ")))?;
-                err(&tr(&format!("메모 저장: {name}"), &format!("Note saved: {name}")));
+                err(&tr(&format!("메모 저장: {name}"), &format!("Note saved: {name}"), &format!("已保存备注：{name}")));
             }
             Ok(0)
         }
@@ -165,14 +184,14 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
                 return Err(Error::InvalidName(name.to_string()));
             }
             if store.exists(name)?
-                && !store.authenticate(&tr(&format!("'{name}' 시크릿을 덮어쓰려고 합니다"), &format!("overwrite '{name}'")))
+                && !store.authenticate(&tr(&format!("'{name}' 시크릿을 덮어쓰려고 합니다"), &format!("overwrite '{name}'"), &format!("覆盖 '{name}'")))
             {
                 return Ok(denied());
             }
             let value = match read_secret() {
                 Some(v) if !v.is_empty() => v,
                 _ => {
-                    err(&tr("값이 비어 있습니다", "The value is empty"));
+                    err(&tr("값이 비어 있습니다", "The value is empty", "值为空"));
                     return Ok(1);
                 }
             };
@@ -180,7 +199,7 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             if let Some(note) = note {
                 store.set_note(name, Some(note))?;
             }
-            err(&tr(&format!("저장됨: {name}"), &format!("Saved: {name}")));
+            err(&tr(&format!("저장됨: {name}"), &format!("Saved: {name}"), &format!("已保存：{name}")));
             Ok(0)
         }
 
@@ -192,11 +211,11 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             if !store.exists(name)? {
                 return Err(Error::NotFound(name.to_string()));
             }
-            if !store.authenticate(&tr(&format!("'{name}' 시크릿을 삭제하려고 합니다"), &format!("delete '{name}'"))) {
+            if !store.authenticate(&tr(&format!("'{name}' 시크릿을 삭제하려고 합니다"), &format!("delete '{name}'"), &format!("删除 '{name}'"))) {
                 return Ok(denied());
             }
             store.remove(name)?;
-            err(&tr(&format!("삭제됨: {name}"), &format!("Deleted: {name}")));
+            err(&tr(&format!("삭제됨: {name}"), &format!("Deleted: {name}"), &format!("已删除：{name}")));
             Ok(0)
         }
 
@@ -217,11 +236,12 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             if !store.authenticate(&tr(
                 &format!("'{old}' 시크릿의 이름을 '{new}'(으)로 바꾸려고 합니다"),
                 &format!("rename '{old}' to '{new}'"),
+                &format!("将 '{old}' 重命名为 '{new}'"),
             )) {
                 return Ok(denied());
             }
             store.rename(old, new)?;
-            err(&tr(&format!("이름 변경: {old} → {new}"), &format!("Renamed: {old} → {new}")));
+            err(&tr(&format!("이름 변경: {old} → {new}"), &format!("Renamed: {old} → {new}"), &format!("已重命名：{old} → {new}")));
             Ok(0)
         }
 
@@ -235,12 +255,12 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
                 return Err(Error::NotFound(name.to_string()));
             }
             let mut until = 0.0;
-            let mut label = tr("무기한", "no expiry");
+            let mut label = tr("무기한", "no expiry", "不过期");
             if rest.len() == 3 {
                 match rest[2].parse::<f64>() {
                     Ok(hours) if hours > 0.0 && hours <= 24.0 * 365.0 => {
                         until = now() + hours * 3600.0;
-                        label = tr(&format!("{}시간", rest[2]), &format!("{} hours", rest[2]));
+                        label = tr(&format!("{}시간", rest[2]), &format!("{} hours", rest[2]), &format!("{} 小时", rest[2]));
                     }
                     _ => return Ok(bad()),
                 }
@@ -249,20 +269,22 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
                 if !store.authenticate(&tr(
                     &format!("모든 시크릿(앞으로 추가될 것 포함)을 인증 없이 읽도록 허용({label})하려고 합니다"),
                     &format!("let agents read every secret, including future ones, without asking ({label})"),
+                    &format!("允许助手无需验证读取所有密钥（包括以后添加的）（{label}）"),
                 )) {
                     return Ok(denied());
                 }
                 store.set_all_grant(Some(until))?;
-                err(&tr(&format!("전체 허용됨 ({label})"), &format!("All allowed ({label})")));
+                err(&tr(&format!("전체 허용됨 ({label})"), &format!("All allowed ({label})"), &format!("已全部允许（{label}）")));
             } else {
                 if !store.authenticate(&tr(
                     &format!("'{name}' 시크릿을 인증 없이 읽도록 허용({label})하려고 합니다"),
                     &format!("let agents read '{name}' without asking ({label})"),
+                    &format!("允许助手无需验证读取 '{name}'（{label}）"),
                 )) {
                     return Ok(denied());
                 }
                 store.set_grant(name, Some(until))?;
-                err(&tr(&format!("허용됨: {name} ({label})"), &format!("Allowed: {name} ({label})")));
+                err(&tr(&format!("허용됨: {name} ({label})"), &format!("Allowed: {name} ({label})"), &format!("已允许：{name}（{label}）")));
             }
             Ok(0)
         }
@@ -273,10 +295,10 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             }
             if rest[0] == "--all" {
                 store.set_all_grant(None)?;
-                err(&tr("전체 허용 해제: 모든 시크릿이 다시 매번 묻기", "All access revoked: every secret asks again"));
+                err(&tr("전체 허용 해제: 모든 시크릿이 다시 매번 묻기", "All access revoked: every secret asks again", "已撤销全部访问：所有密钥恢复每次询问"));
             } else {
                 store.set_grant(rest[0], None)?;
-                err(&tr(&format!("허용 해제: {}", rest[0]), &format!("Revoked: {}", rest[0])));
+                err(&tr(&format!("허용 해제: {}", rest[0]), &format!("Revoked: {}", rest[0]), &format!("已撤销：{}", rest[0])));
             }
             Ok(0)
         }
@@ -308,7 +330,7 @@ fn authorize_read(store: &dyn SecretStore, names: &[&str]) -> Result<bool, Error
         return Ok(true);
     }
     let list = pending.join(", ");
-    Ok(store.authenticate(&tr(&format!("시크릿을 읽으려고 합니다: {list}"), &format!("read secrets: {list}"))))
+    Ok(store.authenticate(&tr(&format!("시크릿을 읽으려고 합니다: {list}"), &format!("read secrets: {list}"), &format!("读取密钥：{list}"))))
 }
 
 fn read_secret() -> Option<String> {
@@ -322,7 +344,7 @@ fn read_secret() -> Option<String> {
         }
         return Some(text);
     }
-    let _ = write!(std::io::stderr(), "{}", tr("값(입력은 표시되지 않음): ", "Value (input hidden): "));
+    let _ = write!(std::io::stderr(), "{}", tr("값(입력은 표시되지 않음): ", "Value (input hidden): ", "值（输入不会显示）："));
     let _ = std::io::stderr().flush();
     rpassword::read_password().ok()
 }
@@ -343,7 +365,7 @@ fn exec(command: &[&str], env: Vec<(String, String)>) -> i32 {
     let mut child = match cmd.spawn() {
         Ok(child) => child,
         Err(error) => {
-            err(&format!("{}{error}", tr(&format!("실행 실패: {}: ", command[0]), &format!("Failed to run {}: ", command[0]))));
+            err(&format!("{}{error}", tr(&format!("실행 실패: {}: ", command[0]), &format!("Failed to run {}: ", command[0]), &format!("无法运行 {}：", command[0]))));
             return 127;
         }
     };

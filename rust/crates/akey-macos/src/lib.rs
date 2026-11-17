@@ -87,7 +87,7 @@ impl KeychainStore {
 
 fn keychain_error(e: security_framework::base::Error) -> Error {
     let code = e.code();
-    Error::Backend(tr(&format!("키체인 오류 {code}: {e}"), &format!("Keychain error {code}: {e}")))
+    Error::Backend(tr(&format!("키체인 오류 {code}: {e}"), &format!("Keychain error {code}: {e}"), &format!("钥匙串错误 {code}：{e}")))
 }
 
 impl SecretStore for KeychainStore {

@@ -185,24 +185,53 @@ pub fn toggle_popover(app: &AppHandle) {
 
 pub fn open_settings(app: &AppHandle) {
     hide_popover(app);
-    let title = tr("Akey 설정", "Akey Settings");
-    if let Some(window) = app.get_webview_window("settings") {
-        let _ = window.set_title(&title);
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-        return;
+    let title = tr("Akey 설정", "Akey Settings", "Akey 设置");
+    let window = match app.get_webview_window("settings") {
+        Some(window) => {
+            let _ = window.set_title(&title);
+            window
+        }
+        None => {
+            let built = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
+                .title(title)
+                .inner_size(480.0, 560.0)
+                .resizable(false)
+                .minimizable(false)
+                .maximizable(false)
+                .visible(false)
+                .focused(true)
+                .build();
+            let Ok(window) = built else { return };
+            window
+        }
+    };
+    // 방금 누른 곳(마우스가 있는 모니터)의 가운데에 놓고 보여 준다
+    let w = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        place_on_current_monitor(&w);
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    });
+    wake();
+}
+
+#[cfg(target_os = "macos")]
+fn place_on_current_monitor(window: &tauri::WebviewWindow) {
+    if let Ok(ptr) = window.ns_window() {
+        unsafe { akey_macos::status::center_on_mouse_screen(ptr) };
     }
-    let built = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
-        .title(title)
-        .inner_size(480.0, 560.0)
-        .resizable(false)
-        .minimizable(false)
-        .maximizable(false)
-        .center()
-        .focused(true)
-        .build();
-    if let Ok(window) = built {
-        let _ = window.set_focus();
-    }
+}
+
+/// Windows: 마우스가 있는 모니터의 작업 영역 가운데
+#[cfg(not(target_os = "macos"))]
+fn place_on_current_monitor(window: &tauri::WebviewWindow) {
+    let app = window.app_handle();
+    let Ok(cursor) = app.cursor_position() else { return };
+    let Ok(Some(monitor)) = app.monitor_from_point(cursor.x, cursor.y) else { return };
+    let Ok(size) = window.outer_size() else { return };
+    let area = monitor.work_area();
+    let x = area.position.x + (area.size.width as i32 - size.width as i32) / 2;
+    let y = area.position.y + (area.size.height as i32 - size.height as i32) / 2;
+    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
 }

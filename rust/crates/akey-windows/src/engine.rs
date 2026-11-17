@@ -284,12 +284,13 @@ impl<P: Platform> Engine<P> {
         }
         let challenge = random::<32>()?;
         let Some(sig) = self.platform.hello_sign(&challenge, true)? else {
-            return Err(Error::Backend(tr("Windows Hello 확인이 취소되었습니다", "Windows Hello was cancelled")));
+            return Err(Error::Backend(tr("Windows Hello 확인이 취소되었습니다", "Windows Hello was cancelled", "Windows Hello 验证已取消")));
         };
         if !self.platform.hello_verify(&challenge, &sig)? {
             return Err(Error::Backend(tr(
                 "이 PC 의 Windows Hello 서명 방식으로는 키를 보호할 수 없습니다",
                 "This PC's Windows Hello signature format can't be used to protect keys",
+                "此电脑的 Windows Hello 签名格式无法用于保护密钥",
             )));
         }
         let kek = hkdf32(&sig, &challenge, KEK_INFO);
@@ -319,6 +320,7 @@ impl<P: Platform> Engine<P> {
             Err(_) => Err(Error::Backend(tr(
                 "Windows Hello 키가 바뀌어 '매번 묻기' 값을 풀 수 없습니다",
                 "The Windows Hello key changed; 'ask every time' values can't be decrypted",
+                "Windows Hello 密钥已更改，无法解密“每次询问”的值",
             ))),
         }
     }
