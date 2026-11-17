@@ -21,6 +21,8 @@ const ui = {
   selecting: false,      // 여러 개 골라 복사하는 중
   selected: new Set(),   // 고른 이름
   query: "",             // 검색어 (이름·메모 부분 일치, 대소문자 무시)
+  group: 0,              // 지금 보는 묶음(동그라미)
+  renamingGroup: false,  // 묶음 이름 바꾸는 중
   message: "",
   messageIsError: false,
 };
@@ -103,7 +105,8 @@ async function callQuiet(cmd, args) {
 // 검색어가 이름이나 메모의 일부와 맞는 항목만 (공백으로 나눈 낱말은 모두 맞아야 함)
 function visibleItems() {
   const words = ui.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return ui.snap.items;
+  // 검색어가 없으면 지금 묶음만, 있으면 모든 묶음에서 찾는다
+  if (!words.length) return ui.snap.items.filter((i) => i.group === ui.group);
   return ui.snap.items.filter((i) => {
     const hay = `${i.name}\n${i.note || ""}`.toLowerCase();
     return words.every((w) => hay.includes(w));
@@ -126,29 +129,112 @@ function searchBox() {
 }
 
 // ---- 화면 ----
-function header(s) {
-  const right = [];
-  if (s.all_label) {
-    right.push(el("button", {
-      class: `badge kind-${s.all_kind}`, title: t("changeInSettings"),
-      onclick: () => invoke("open_settings"),
-    }, el("span", { icon: "cpu" }), el("span", { text: t("agentsAll", s.all_label) })));
-  }
+// 에이전트 전체 접근: 꺼짐(시크릿별) / 8시간 / 항상. 켤 때는 인증을 묻는다
+function agentSelect(s) {
+  const current = s.all_kind === "ask" ? "off" : s.all_kind;
+  const options = [
+    ["off", t("agentOff")],
+    ["timed", s.all_kind === "timed" ? `${t("agent8h")} · ${s.all_label}` : t("agent8h")],
+    ["always", t("agentAlways")],
+  ];
+  const sel = el("select", { class: "agent-select", "aria-label": t("agentAccess"),
+    onchange: async (e) => {
+      const v = e.target.value;
+      if (v === current) return;
+      await call("set_all_grant", { hours: v === "timed" ? 8 : v === "always" ? 0 : null });
+      await refresh();
+    } },
+    options.map(([v, label]) => el("option", { value: v, text: label, selected: v === current })));
+  return el("label", { class: `agent kind-${s.all_kind}`, title: t("agentAccessHelp") },
+    el("span", { icon: "cpu" }), sel);
+}
+
+// 잠김 ↔ 풀림 토글: 잠김을 누르면 인증 후 모든 값을 보이고, 풀림을 누르면 모두 가리고 다시 잠근다
+async function unlockAll() {
+  const { ok, result } = await callQuiet("reveal_all");
+  if (ok) for (const [name, value] of Object.entries(result)) ui.revealed.set(name, value);
+  await refresh();
+}
+
+async function lockAll() {
+  await invoke("lock");
+  ui.revealed.clear();
+  await refresh();
+}
+
+function lockToggle(s) {
   if (s.unlocked) {
-    right.push(el("button", {
-      class: "badge green", title: t("unlockedHelp"),
-      onclick: async () => { await invoke("lock"); ui.revealed.clear(); await refresh(); },
-    }, el("span", { icon: "lockOpen" }), el("span", { text: t("unlocked") })));
-  } else {
-    right.push(el("span", { class: "badge kind-ask", title: t("lockedHelp", s.unlock_minutes) },
-      el("span", { icon: "lock" }), el("span", { text: t("locked") })));
+    return el("button", { class: "badge green", title: t("unlockedHelp"), onclick: lockAll },
+      el("span", { icon: "lockOpen" }), el("span", { text: t("unlocked") }));
   }
+  return el("button", { class: "badge kind-ask", title: t("lockedHelp", s.unlock_minutes), onclick: unlockAll },
+    el("span", { icon: "lock" }), el("span", { text: t("locked") }));
+}
+
+function header(s) {
   return el("div", { class: "header" },
     el("span", { class: "logo", icon: "logo" }),
-    el("span", { class: "title", text: "akey" }),
+    el("span", { class: "title", text: "Akey" }),
     el("span", { class: "count", text: String(s.items.length) }),
     el("span", { class: "spacer" }),
-    ...right);
+    agentSelect(s),
+    lockToggle(s));
+}
+
+// ---- 묶음(동그라미) ----
+function groupLabel(i) {
+  const name = ui.snap.group_names[i];
+  return name || t("groupN", i + 1);
+}
+
+function groupDots() {
+  const counts = new Array(ui.snap.group_names.length).fill(0);
+  for (const it of ui.snap.items) counts[it.group] += 1;
+  const searching = ui.query.trim() !== "";
+  const dots = counts.map((n, i) => el("button", {
+    class: `dot g${i} ${i === ui.group && !searching ? "current" : ""} ${n ? "filled" : ""}`,
+    title: `${groupLabel(i)} · ${t("countN", n)}`, "aria-label": groupLabel(i),
+    "aria-pressed": i === ui.group ? "true" : "false",
+    onclick: () => {
+      ui.group = i; ui.query = ""; ui.renamingGroup = false; ui.editing = null; ui.menuFor = null;
+      render();
+    },
+  }));
+  let label;
+  if (ui.renamingGroup) {
+    const done = async (save, value) => {
+      ui.renamingGroup = false;
+      if (save) await call("set_group_name", { group: ui.group, label: value });
+      await refresh();
+    };
+    label = el("input", { type: "text", class: "group-name-input", id: "group-name", maxlength: "24",
+      value: ui.snap.group_names[ui.group], placeholder: t("groupN", ui.group + 1),
+      onkeydown: (e) => {
+        if (e.key === "Enter") done(true, e.target.value);
+        if (e.key === "Escape") { e.stopPropagation(); done(false); }
+      },
+      onblur: (e) => { if (ui.renamingGroup) done(true, e.target.value); } });
+  } else {
+    label = el("button", { class: `group-name g${ui.group}`, title: t("renameGroup"),
+      text: searching ? t("allGroups") : groupLabel(ui.group),
+      disabled: searching,
+      onclick: () => { ui.renamingGroup = true; render(); requestAnimationFrame(() => {
+        const box = document.getElementById("group-name"); if (box) { box.focus(); box.select(); } }); } });
+  }
+  return el("div", { class: "groups" }, el("div", { class: "dots" }, dots), label);
+}
+
+// 수정 패널의 묶음 고르기: 누르면 바로 옮긴다
+function groupPicker(item) {
+  return el("div", { class: "dots small" }, ui.snap.group_names.map((_, i) => el("button", {
+    class: `dot g${i} ${i === item.group ? "current filled" : ""}`, title: groupLabel(i), "aria-label": groupLabel(i),
+    onclick: async () => {
+      if (i === item.group) return;
+      const { ok } = await call("set_group", { name: item.name, group: i });
+      if (ok) { ui.editing = null; setMessage(t("movedTo", item.name, groupLabel(i))); }
+      await refresh();
+    },
+  })));
 }
 
 function grantMenu(item) {
@@ -181,6 +267,7 @@ function editPanel(item) {
     el("div", { class: "line" }, el("span", { text: t("name") }), nameInput),
     el("div", { class: "line" }, el("span", { text: t("value") }), valueInput),
     el("div", { class: "line" }, el("span", { text: t("note") }), noteInput),
+    el("div", { class: "line" }, el("span", { text: t("group") }), groupPicker(item)),
     el("div", { class: "line" },
       el("span", { class: "hint", text: t("editAuthHint"), style: "width:auto" }),
       el("span", { class: "spacer" }),
@@ -217,6 +304,7 @@ function row(item) {
 
   const main = el("div", { class: "row-main" },
     el("span", { class: `bar kind-${item.grant_kind}` }),
+    ui.query.trim() ? el("span", { class: `mini-dot g${item.group}`, title: groupLabel(item.group) }) : null,
     el("div", { class: "ident" },
       el("span", { class: "name", title: item.name }, ...breakableName(item.name)),
       item.note ? el("span", { class: "note", text: item.note, title: item.note }) : null),
@@ -245,14 +333,15 @@ function row(item) {
 function addCard() {
   const a = ui.add;
   const submit = async () => {
-    const { ok } = await call("add", { name: a.name.trim(), value: a.value, note: a.note });
+    const { ok } = await call("add", { name: a.name.trim(), value: a.value, note: a.note, group: ui.group });
     if (ok) { a.name = ""; a.value = ""; a.note = ""; }
     await refresh();
   };
   const update = () => { addBtn.disabled = !(a.name.trim() && a.value); };
   const addBtn = el("button", { class: "btn primary", text: t("add"), onclick: submit, disabled: !(a.name.trim() && a.value) });
   return el("div", { class: "add" },
-    el("div", { class: "label" }, el("span", { icon: "plus" }), el("span", { text: t("newSecret") })),
+    el("div", { class: "label" }, el("span", { icon: "plus" }), el("span", { text: t("newSecret") }),
+      el("span", { class: `mini-dot g${ui.group}` }), el("span", { class: "in-group", text: groupLabel(ui.group) })),
     el("div", { class: "line" },
       el("input", { type: "text", class: "mono name", placeholder: "NAME", value: a.name, spellcheck: "false",
         oninput: (e) => { a.name = e.target.value; update(); } }),
@@ -312,13 +401,15 @@ function render() {
   const caret = focusKey >= 0 ? active.selectionStart : null;
 
   const items = visibleItems();
-  const emptyText = s.items.length ? t("noMatches", ui.query.trim()) : t("noSecrets");
+  const emptyText = ui.query.trim() ? t("noMatches", ui.query.trim()) : s.items.length ? t("emptyGroup") : t("noSecrets");
   const list = items.length
     ? el("div", { class: "list" }, items.map(row))
     : el("div", { class: "list" }, el("div", { class: "empty", text: emptyText }));
   const search = s.items.length ? searchBox() : null;
   const hint = ui.selecting ? el("div", { class: "select-hint", text: t("selectHint") }) : null;
-  const parts = ui.selecting ? [header(s), hint, search, list, footer()] : [header(s), search, list, addCard(), footer()];
+  const parts = ui.selecting
+    ? [header(s), groupDots(), hint, search, list, footer()]
+    : [header(s), groupDots(), search, list, addCard(), footer()];
   document.getElementById("root").replaceChildren(...parts);
 
   if (focusKey >= 0) {
@@ -357,6 +448,7 @@ listen("akey://hidden", () => {
   ui.draft = { name: "", value: "", note: "" };
   ui.menuFor = null;
   ui.query = "";
+  ui.renamingGroup = false;
   exitSelecting();
   render();
 });

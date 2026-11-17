@@ -20,7 +20,7 @@ mod imp {
         let handle = app.clone();
         let created = status::create_status_item(
             include_bytes!("../icons/tray-template.png"),
-            "akey",
+            "Akey",
             // Swift 판과 같은 이름: 이미 정해 둔 메뉴바 위치를 이어받는다
             "Item-0",
             Box::new(move |event| match event {
@@ -32,7 +32,7 @@ mod imp {
                     crate::app::debug("status right click");
                     crate::app::hide_popover(&handle);
                     status::show_menu(&[
-                        (MENU_ABOUT, tr("akey 정보", "About akey")),
+                        (MENU_ABOUT, tr("Akey 정보", "About Akey")),
                         (MENU_SETTINGS, tr("설정…", "Settings…")),
                         (0, String::new()),
                         (MENU_QUIT, tr("종료", "Quit")),
@@ -65,9 +65,9 @@ mod imp {
     fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         let about = PredefinedMenuItem::about(
             app,
-            Some(&tr("akey 정보", "About akey")),
+            Some(&tr("Akey 정보", "About Akey")),
             Some(AboutMetadata {
-                name: Some("akey".into()),
+                name: Some("Akey".into()),
                 version: Some(app.package_info().version.to_string()),
                 comments: Some(tr(
                     "에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
@@ -86,7 +86,7 @@ mod imp {
         let menu = build_menu(app)?;
         TrayIconBuilder::with_id(TRAY_ID)
             .icon(Image::from_bytes(include_bytes!("../icons/32x32.png"))?)
-            .tooltip("akey")
+            .tooltip("Akey")
             .menu(&menu)
             .show_menu_on_left_click(false)
             .on_menu_event(|app, event| match event.id().as_ref() {

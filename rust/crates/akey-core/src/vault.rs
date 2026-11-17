@@ -1,5 +1,7 @@
 //! 금고 모델. Swift 판 Store.swift 의 JSON 과 같은 모양이다:
 //! `{"secrets":{이름:값}, "grants":{이름:만료시각(epoch 초, 0=무기한)}, "notes":{이름:메모}}`
+//! 여기에 묶음(동그라미)이 더해진다: `"groups":{이름:번호(1..)}`, `"group_names":["", "회사", ...]`
+//! (번호 0 = 첫 묶음은 저장하지 않는다)
 //! 모르는 필드는 그대로 보존해 Swift 판과 섞어 써도 데이터가 사라지지 않게 한다.
 
 use std::collections::BTreeMap;
@@ -13,6 +15,56 @@ use crate::error::{Error, Result};
 pub const ALL_KEY: &str = "*";
 pub const MAX_NOTE_LENGTH: usize = 200;
 pub const MAX_NAME_LENGTH: usize = 128;
+/// 묶음(동그라미) 개수
+pub const GROUP_COUNT: u8 = 7;
+pub const MAX_GROUP_NAME_LENGTH: usize = 24;
+
+/// 묶음 정보: 묶음마다 이름(빈 문자열 = 이름 없음)과 시크릿마다 속한 묶음 번호
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct Groups {
+    /// 길이 GROUP_COUNT
+    pub names: Vec<String>,
+    /// 이름 → 묶음 번호 (없으면 0)
+    pub of: BTreeMap<String, u8>,
+}
+
+impl Groups {
+    pub fn new(names: &[String], of: BTreeMap<String, u8>) -> Groups {
+        let mut names: Vec<String> = names.iter().take(GROUP_COUNT as usize).cloned().collect();
+        names.resize(GROUP_COUNT as usize, String::new());
+        let of = of.into_iter().filter(|(_, g)| *g > 0 && *g < GROUP_COUNT).collect();
+        Groups { names, of }
+    }
+
+    pub fn group_of(&self, name: &str) -> u8 {
+        self.of.get(name).copied().unwrap_or(0)
+    }
+}
+
+pub fn check_group(group: u8) -> Result<()> {
+    if group < GROUP_COUNT {
+        Ok(())
+    } else {
+        Err(Error::Backend(format!("invalid group {group}")))
+    }
+}
+
+/// 묶음 이름: 한 줄, 앞뒤 공백 제거, 24자 제한
+pub fn clean_group_name(label: &str) -> String {
+    let flat: String = label.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
+    flat.trim().chars().take(MAX_GROUP_NAME_LENGTH).collect()
+}
+
+/// 묶음 이름 목록을 GROUP_COUNT 길이로 맞추고 한 칸을 바꾼다 (끝의 빈 칸은 저장하지 않게 잘라낸다)
+pub fn set_group_label(names: &mut Vec<String>, group: u8, label: &str) -> Result<()> {
+    check_group(group)?;
+    names.resize(GROUP_COUNT as usize, String::new());
+    names[group as usize] = clean_group_name(label);
+    while names.last().is_some_and(|n| n.is_empty()) {
+        names.pop();
+    }
+    Ok(())
+}
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Vault {
@@ -22,6 +74,10 @@ pub struct Vault {
     pub grants: BTreeMap<String, f64>,
     #[serde(default)]
     pub notes: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub groups: BTreeMap<String, u8>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group_names: Vec<String>,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
@@ -89,6 +145,7 @@ impl Vault {
         }
         self.grants.remove(name);
         self.notes.remove(name);
+        self.groups.remove(name);
         Ok(())
     }
 
@@ -113,6 +170,9 @@ impl Vault {
             }
             if let Some(g) = self.grants.remove(old) {
                 self.grants.insert(new.to_string(), g);
+            }
+            if let Some(g) = self.groups.remove(old) {
+                self.groups.insert(new.to_string(), g);
             }
         }
         self.secrets.insert(new.to_string(), current);
@@ -157,6 +217,29 @@ impl Vault {
         Ok(())
     }
 
+    pub fn groups(&self) -> Groups {
+        Groups::new(&self.group_names, self.groups.clone())
+    }
+
+    /// 시크릿을 묶음으로 옮긴다 (0 = 첫 묶음)
+    pub fn set_group(&mut self, name: &str, group: u8) -> Result<()> {
+        check_name(name)?;
+        check_group(group)?;
+        if !self.secrets.contains_key(name) {
+            return Err(Error::NotFound(name.to_string()));
+        }
+        if group == 0 {
+            self.groups.remove(name);
+        } else {
+            self.groups.insert(name.to_string(), group);
+        }
+        Ok(())
+    }
+
+    pub fn set_group_name(&mut self, group: u8, label: &str) -> Result<()> {
+        set_group_label(&mut self.group_names, group, label)
+    }
+
     /// 전체 허용만 끈다 (시크릿별 허용은 그대로)
     pub fn unset_all_grant(&mut self) {
         self.grants.remove(ALL_KEY);
@@ -186,6 +269,37 @@ mod tests {
         assert_eq!(v.names(), vec!["GITHUB_TOKEN", "aaa"]);
         assert_eq!(v.grants.get("*"), Some(&1794736046.25));
         assert!(v.notes.is_empty());
+    }
+
+    #[test]
+    fn groups_follow_rename_and_remove() {
+        let mut v = Vault::default();
+        v.set("A", "1").unwrap();
+        v.set("B", "2").unwrap();
+        v.set_group("A", 3).unwrap();
+        assert!(v.set_group("A", GROUP_COUNT).is_err());
+        assert!(v.set_group("NOPE", 1).is_err());
+        v.rename("A", "C").unwrap();
+        assert_eq!(v.groups().group_of("C"), 3);
+        assert_eq!(v.groups().group_of("B"), 0);
+        v.remove("C").unwrap();
+        assert!(v.groups.is_empty());
+        v.set_group("B", 2).unwrap();
+        v.set_group("B", 0).unwrap();
+        assert!(v.groups.is_empty());
+    }
+
+    #[test]
+    fn group_names_are_padded_and_trimmed() {
+        let mut v = Vault::default();
+        v.set_group_name(2, "  회사\n ").unwrap();
+        assert_eq!(v.group_names, vec!["", "", "회사"]);
+        assert_eq!(v.groups().names.len(), GROUP_COUNT as usize);
+        v.set_group_name(2, "").unwrap();
+        assert!(v.group_names.is_empty());
+        // 그룹 정보가 없으면 JSON 에 필드가 생기지 않는다 (Swift 판과 같은 모양)
+        let json = String::from_utf8(v.to_json()).unwrap();
+        assert!(!json.contains("group"));
     }
 
     #[test]

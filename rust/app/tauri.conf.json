@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "akey",
+  "productName": "Akey",
   "mainBinaryName": "akey",
   "version": "0.2.0",
   "identifier": "local.akey",
@@ -13,7 +13,7 @@
       {
         "label": "main",
         "url": "index.html",
-        "title": "akey",
+        "title": "Akey",
         "width": 540,
         "height": 420,
         "visible": false,

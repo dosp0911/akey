@@ -21,8 +21,8 @@ use std::sync::Mutex;
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use akey_core::grants::{self, now, Grants};
-use akey_core::vault::{check_name, clean_note};
-use akey_core::{tr, Error, Result, SecretStore, ALL_KEY};
+use akey_core::vault::{check_group, check_name, clean_note, set_group_label};
+use akey_core::{tr, Error, Groups, Result, SecretStore, ALL_KEY};
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine as _;
 use hkdf::Hkdf;
@@ -86,6 +86,13 @@ struct Entry {
     id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     note: Option<String>,
+    /// 묶음 번호 (0 = 첫 묶음, 저장 안 함)
+    #[serde(default, skip_serializing_if = "is_zero")]
+    group: u8,
+}
+
+fn is_zero(n: &u8) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -94,6 +101,8 @@ struct Meta {
     names: BTreeMap<String, Entry>,
     #[serde(default)]
     grants: Grants,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    group_names: Vec<String>,
 }
 
 const META_ENTROPY: &[u8] = b"akey:meta";
@@ -407,7 +416,7 @@ impl<P: Platform> SecretStore for Engine<P> {
             let class = Self::class_for(name, &l.meta);
             let blob = self.protect_value(&mut l.file, &id, class, value.as_bytes())?;
             l.file.items.insert(id.clone(), blob);
-            l.meta.names.entry(name.to_string()).or_insert(Entry { id, note: None });
+            l.meta.names.entry(name.to_string()).or_insert(Entry { id, note: None, group: 0 });
             Ok(((), true))
         })
     }
@@ -458,6 +467,30 @@ impl<P: Platform> SecretStore for Engine<P> {
             let entry = l.meta.names.get_mut(name).ok_or_else(|| Error::NotFound(name.to_string()))?;
             let cleaned = clean_note(note.unwrap_or(""));
             entry.note = (!cleaned.is_empty()).then_some(cleaned);
+            Ok(((), true))
+        })
+    }
+
+    fn groups(&self) -> Result<Groups> {
+        self.read(|l| {
+            let of = l.meta.names.iter().filter(|(_, e)| e.group > 0).map(|(n, e)| (n.clone(), e.group)).collect();
+            Ok(Groups::new(&l.meta.group_names, of))
+        })
+    }
+
+    fn set_group(&self, name: &str, group: u8) -> Result<()> {
+        check_name(name)?;
+        check_group(group)?;
+        self.with_vault(|l| {
+            let entry = l.meta.names.get_mut(name).ok_or_else(|| Error::NotFound(name.to_string()))?;
+            entry.group = group;
+            Ok(((), true))
+        })
+    }
+
+    fn set_group_name(&self, group: u8, label: &str) -> Result<()> {
+        self.with_vault(|l| {
+            set_group_label(&mut l.meta.group_names, group, label)?;
             Ok(((), true))
         })
     }
@@ -716,6 +749,20 @@ mod tests {
         assert_eq!(e.get("NEW").unwrap(), "value");
         e.set("X", "x").unwrap();
         assert!(matches!(e.rename("NEW", "X"), Err(Error::AlreadyExists(_))));
+    }
+
+    #[test]
+    fn groups_follow_rename_and_names_are_saved() {
+        let (e, _) = engine("groups");
+        e.set("A", "1").unwrap();
+        e.set_group("A", 4).unwrap();
+        e.rename("A", "B").unwrap();
+        assert_eq!(e.groups().unwrap().group_of("B"), 4);
+        e.set_group_name(4, "work").unwrap();
+        assert_eq!(e.groups().unwrap().names[4], "work");
+        assert!(e.set_group("B", 9).is_err());
+        e.remove("B").unwrap();
+        assert!(e.groups().unwrap().of.is_empty());
     }
 
     #[test]

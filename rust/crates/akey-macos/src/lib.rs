@@ -10,7 +10,7 @@ pub mod status;
 use std::collections::BTreeMap;
 use std::sync::mpsc;
 
-use akey_core::{tr, Error, Grants, Result, SecretStore, Settings, Vault};
+use akey_core::{tr, Error, Grants, Groups, Result, SecretStore, Settings, Vault};
 use block2::RcBlock;
 use objc2::runtime::Bool;
 use objc2::MainThreadMarker;
@@ -129,6 +129,18 @@ impl SecretStore for KeychainStore {
 
     fn set_grant(&self, name: &str, until: Option<f64>) -> Result<()> {
         self.modify(|v| v.set_grant(name, until))
+    }
+
+    fn groups(&self) -> Result<Groups> {
+        Ok(self.load()?.groups())
+    }
+
+    fn set_group(&self, name: &str, group: u8) -> Result<()> {
+        self.modify(|v| v.set_group(name, group))
+    }
+
+    fn set_group_name(&self, group: u8, label: &str) -> Result<()> {
+        self.modify(|v| v.set_group_name(group, label))
     }
 
     fn set_all_grant(&self, until: Option<f64>) -> Result<()> {

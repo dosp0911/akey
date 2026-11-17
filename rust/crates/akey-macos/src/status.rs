@@ -102,7 +102,7 @@ pub fn create_status_item(icon_png: &[u8], tooltip: &str, autosave_name: &str, c
                 button.setImage(Some(&image));
             }
             // 아이콘을 못 읽으면 글자라도 보이게 한다 (폭이 0 이면 메뉴바에 나타나지 않음)
-            None => button.setTitle(&NSString::from_str("akey")),
+            None => button.setTitle(&NSString::from_str("Akey")),
         }
         button.setToolTip(Some(&NSString::from_str(tooltip)));
         unsafe {

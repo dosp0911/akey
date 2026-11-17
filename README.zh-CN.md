@@ -1,4 +1,4 @@
-# akey
+# Akey
 
 [English](README.md) | [한국어](README.ko.md) | **简体中文**
 
@@ -54,9 +54,9 @@ scoop install akey
 irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 ```
 
-在 macOS 上会安装 `/Applications/akey.app` 和 `akey` 命令；在 Windows 上会把 `akey.exe`（命令行）和 `akey-app.exe`（托盘应用）安装到 `%LOCALAPPDATA%\Programs\akey`。
+在 macOS 上会安装 `/Applications/Akey.app` 和 `akey` 命令；在 Windows 上会把 `akey.exe`（命令行）和 `akey-app.exe`（托盘应用）安装到 `%LOCALAPPDATA%\Programs\akey`。
 
-> **关于签名**：目前的版本还没有 Apple Developer ID 签名。Homebrew 和安装脚本会替你移除 Gatekeeper 的隔离标记。更新后第一次打开 akey 时，如果 macOS 询问钥匙串密码，请点击 **“始终允许”**。
+> **关于签名**：目前的版本还没有 Apple Developer ID 签名。Homebrew 和安装脚本会替你移除 Gatekeeper 的隔离标记。更新后第一次打开 Akey 时，如果 macOS 询问钥匙串密码，请点击 **“始终允许”**。
 
 > **校验下载文件**：安装脚本会用同一版本中的 `checksums.txt` 校验文件，可以发现下载损坏，但无法防止发布文件和校验和被同时替换。每个发布文件都附带 GitHub 构建来源证明（attestation），可以确认它确实由本仓库的发布工作流构建：
 >
@@ -69,6 +69,9 @@ irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 菜单栏（托盘）图标：
 - **左键点击**：打开密钥列表。值默认隐藏，点击值或 👁 并通过验证后显示。
 - **右键点击**：关于 / 设置 / 退出。
+- **分组**：顶部的 7 个圆点把密钥分成不同的组（个人、工作、项目等）。点击圆点只显示该组，点击组名可以重命名。新密钥会放进当前查看的组，可通过 ✏️ → 分组移动。搜索会查找所有组。
+- **锁定徽章**：点击 **已锁定** 并通过验证后一次显示所有值；点击 **已解锁** 会隐藏所有值并重新锁定。
+- **助手访问**（右上角）：按密钥 / 8 小时全部 / 始终全部。开启时需要验证。
 - 验证一次后，在设定的时间内（默认 30 分钟）查看和复制都不会再询问。
 - 删除、编辑（名称或值）和更改访问权限每次都会询问。
 
@@ -182,7 +185,7 @@ foreach ($f in "$HOME\.claude\CLAUDE.md", "$HOME\.codex\AGENTS.md") {
 cd rust
 npm ci                                   # Tauri CLI
 cargo test -p akey-core -p akey-windows -p akey-cli
-cd app && npx tauri build                # macOS: target/release/bundle/macos/akey.app
+cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
 - `rust/crates/akey-core`：保险库模型、访问规则、设置、韩语/英语文本

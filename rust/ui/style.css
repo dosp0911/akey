@@ -75,6 +75,53 @@ button.badge { cursor: pointer; }
 .kind-always { --badge: var(--green); }
 .badge.green { --badge: var(--green); }
 
+/* 묶음(동그라미): 7가지 색 */
+.g0 { --g: var(--indigo); }
+.g1 { --g: rgb(52, 152, 219); }
+.g2 { --g: rgb(38, 166, 154); }
+.g3 { --g: var(--green); }
+.g4 { --g: var(--gold); }
+.g5 { --g: var(--orange); }
+.g6 { --g: rgb(214, 84, 150); }
+
+.groups { display: flex; align-items: center; gap: 10px; }
+.dots { display: flex; align-items: center; gap: 8px; }
+.dot {
+  width: 16px; height: 16px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid color-mix(in srgb, var(--g) 55%, transparent);
+  background: transparent; transition: transform .08s;
+}
+.dot.filled { background: color-mix(in srgb, var(--g) 30%, transparent); }
+.dot:hover { transform: scale(1.12); }
+.dot.current { background: var(--g); border-color: var(--g); box-shadow: 0 0 0 3px color-mix(in srgb, var(--g) 22%, transparent); }
+.dots.small { gap: 6px; }
+.dots.small .dot { width: 13px; height: 13px; }
+.group-name {
+  border: none; background: none; padding: 1px 4px; border-radius: 5px; cursor: text;
+  font-size: 12px; font-weight: 600; color: var(--g); max-width: 200px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.group-name:hover:not(:disabled) { background: color-mix(in srgb, var(--g) 12%, transparent); }
+.group-name:disabled { color: var(--secondary); cursor: default; }
+input.group-name-input { flex: 0 1 200px; height: 22px; font-size: 12px; }
+.mini-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--g); flex: none; }
+.add .label .mini-dot { margin-left: 4px; }
+.add .label .in-group { color: var(--secondary); font-weight: 500; }
+
+/* 에이전트 전체 접근 드롭박스 */
+.agent {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 4px 0 7px;
+  border-radius: 999px; color: var(--badge, var(--secondary));
+  background: color-mix(in srgb, var(--badge, var(--secondary)) 14%, transparent);
+  font-size: 11px; font-weight: 500;
+}
+.agent svg { width: 11px; height: 11px; flex: none; }
+.agent-select {
+  border: none; background: transparent; color: inherit; font: inherit; padding: 0 2px;
+  outline: none; cursor: pointer; max-width: 190px;
+}
+.agent-select option { color: var(--text); background: var(--menu-bg); }
+
 /* 검색 */
 .search {
   display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px;

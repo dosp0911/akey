@@ -13,7 +13,7 @@ pub use error::{Error, Result};
 pub use grants::Grants;
 pub use i18n::{tr, Lang};
 pub use settings::Settings;
-pub use vault::{is_valid_name, Vault, ALL_KEY};
+pub use vault::{is_valid_name, Groups, Vault, ALL_KEY, GROUP_COUNT};
 
 /// 시크릿 저장소. CLI 와 앱은 이 인터페이스만 쓴다.
 ///
@@ -37,6 +37,11 @@ pub trait SecretStore: Send + Sync {
     }
     fn set_note(&self, name: &str, note: Option<&str>) -> Result<()>;
     fn set_grant(&self, name: &str, until: Option<f64>) -> Result<()>;
+    /// 묶음(동그라미) 이름과 시크릿별 묶음 번호
+    fn groups(&self) -> Result<Groups>;
+    /// 시크릿을 묶음으로 옮긴다 (인증 필요 없음: 정리일 뿐 권한이 바뀌지 않는다)
+    fn set_group(&self, name: &str, group: u8) -> Result<()>;
+    fn set_group_name(&self, group: u8, label: &str) -> Result<()>;
     /// 전체 허용. None = 전체 허용과 시크릿별 허용을 모두 해제 (CLI `deny --all`)
     fn set_all_grant(&self, until: Option<f64>) -> Result<()>;
     /// 전체 허용만 끈다 (시크릿별 허용은 그대로)

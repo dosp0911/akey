@@ -22,6 +22,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             crate::commands::snapshot,
             crate::commands::reveal,
+            crate::commands::reveal_all,
+            crate::commands::set_group,
+            crate::commands::set_group_name,
             crate::commands::copy,
             crate::commands::copy_many,
             crate::commands::lock,
@@ -182,7 +185,7 @@ pub fn toggle_popover(app: &AppHandle) {
 
 pub fn open_settings(app: &AppHandle) {
     hide_popover(app);
-    let title = tr("akey 설정", "akey Settings");
+    let title = tr("Akey 설정", "Akey Settings");
     if let Some(window) = app.get_webview_window("settings") {
         let _ = window.set_title(&title);
         let _ = window.show();

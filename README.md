@@ -1,4 +1,4 @@
-# akey
+# Akey
 
 **English** | [한국어](README.ko.md) | [简体中文](README.zh-CN.md)
 
@@ -54,9 +54,9 @@ or PowerShell
 irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 ```
 
-On macOS this installs `/Applications/akey.app` and the `akey` command. On Windows it installs `akey.exe` (CLI) and `akey-app.exe` (tray app) into `%LOCALAPPDATA%\Programs\akey`.
+On macOS this installs `/Applications/Akey.app` and the `akey` command. On Windows it installs `akey.exe` (CLI) and `akey-app.exe` (tray app) into `%LOCALAPPDATA%\Programs\akey`.
 
-> **About signing**: builds are not yet signed with an Apple Developer ID. Homebrew and the install script remove the Gatekeeper quarantine flag for you. After an update, if macOS asks for your keychain password the first time akey opens, click **"Always Allow"**.
+> **About signing**: builds are not yet signed with an Apple Developer ID. Homebrew and the install script remove the Gatekeeper quarantine flag for you. After an update, if macOS asks for your keychain password the first time Akey opens, click **"Always Allow"**.
 
 > **Verifying downloads**: the install scripts check each file against `checksums.txt` from the same release. That catches corrupted downloads, but not a release whose files *and* checksums were both replaced. Every release file also carries a GitHub build-provenance attestation, so you can confirm it was built by this repository's release workflow:
 >
@@ -69,6 +69,9 @@ On macOS this installs `/Applications/akey.app` and the `akey` command. On Windo
 Menu bar (tray) icon:
 - **Left click**: opens the list of secrets. Values are masked; click a value or 👁 to reveal it after authenticating.
 - **Right click**: About / Settings / Quit.
+- **Groups**: the seven circles at the top split your secrets into groups (personal, work, a project…). Click a circle to see that group; click the group name to rename it. New secrets go into the group you're looking at; move one with ✏️ → Group. Search looks through every group.
+- **Lock badge**: click **Locked** to authenticate and show every value at once; click **Unlocked** to hide them all and lock again.
+- **Agent access** (top right): per secret / all secrets for 8 hours / all secrets always. Turning it on asks for authentication.
 - After one authentication, viewing and copying won't ask again for the time you set (30 minutes by default).
 - Deleting, editing (name or value) and changing access always ask.
 
@@ -182,7 +185,7 @@ foreach ($f in "$HOME\.claude\CLAUDE.md", "$HOME\.codex\AGENTS.md") {
 cd rust
 npm ci                                   # Tauri CLI
 cargo test -p akey-core -p akey-windows -p akey-cli
-cd app && npx tauri build                # macOS: target/release/bundle/macos/akey.app
+cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
 - `rust/crates/akey-core`: vault model, access rules, settings, Korean/English text

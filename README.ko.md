@@ -1,4 +1,4 @@
-# akey
+# Akey
 
 [English](README.md) | **한국어** | [简体中文](README.zh-CN.md)
 
@@ -54,7 +54,7 @@ scoop install akey
 irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 ```
 
-설치하면 Mac은 `/Applications/akey.app`과 `akey` 명령이, Windows는 `%LOCALAPPDATA%\Programs\akey`에 `akey.exe`(CLI)와 `akey-app.exe`(트레이 앱)가 생긴다.
+설치하면 Mac은 `/Applications/Akey.app`과 `akey` 명령이, Windows는 `%LOCALAPPDATA%\Programs\akey`에 `akey.exe`(CLI)와 `akey-app.exe`(트레이 앱)가 생긴다.
 
 > **서명 안내**: 지금은 Apple Developer ID 서명이 없는 빌드다. brew와 설치 스크립트가 Gatekeeper 격리 표시를 지워 준다. 업데이트한 뒤 처음 열 때 키체인 비밀번호를 한 번 물으면 **"항상 허용"**을 누른다.
 
@@ -69,6 +69,9 @@ irm https://github.com/dosp0911/akey/releases/latest/download/install.ps1 | iex
 메뉴바(트레이) 아이콘 사용법:
 - **왼쪽 클릭**: 시크릿 목록이 열린다. 값은 가려져 있고, 값이나 👁를 누르면 인증 뒤 보인다.
 - **오른쪽 클릭**: 정보 / 설정 / 종료.
+- **묶음**: 위쪽의 동그라미 7개로 시크릿을 나눠 관리한다(개인, 회사, 프로젝트 등). 동그라미를 누르면 그 묶음만 보이고, 묶음 이름을 누르면 이름을 바꿀 수 있다. 새 시크릿은 지금 보고 있는 묶음에 들어가고, ✏️ → 묶음에서 옮긴다. 검색은 모든 묶음에서 찾는다.
+- **잠금 배지**: **잠김**을 누르면 인증 뒤 모든 값이 한꺼번에 보이고, **잠금 해제됨**을 누르면 모두 가리고 다시 잠긴다.
+- **에이전트 접근**(오른쪽 위): 시크릿별 / 8시간 전체 / 항상 전체. 켤 때는 인증을 묻는다.
 - 한 번 인증하면 설정한 시간(기본 30분) 동안 보기와 복사를 다시 묻지 않는다.
 - 삭제, 수정(이름·값), 허용 변경은 매번 묻는다.
 
@@ -182,7 +185,7 @@ foreach ($f in "$HOME\.claude\CLAUDE.md", "$HOME\.codex\AGENTS.md") {
 cd rust
 npm ci                                   # Tauri CLI
 cargo test -p akey-core -p akey-windows -p akey-cli
-cd app && npx tauri build                # macOS: target/release/bundle/macos/akey.app
+cd app && npx tauri build                # macOS: target/release/bundle/macos/Akey.app
 ```
 
 - `rust/crates/akey-core`: 금고 모델, 허용 계산, 설정, 한국어/영어

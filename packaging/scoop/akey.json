@@ -13,12 +13,12 @@
     "shortcuts": [
         [
             "akey-app.exe",
-            "akey"
+            "Akey"
         ]
     ],
     "pre_uninstall": "Get-Process akey-app -ErrorAction SilentlyContinue | Stop-Process -Force",
     "notes": [
-        "Start 'akey' from the Start menu to show the tray icon.",
+        "Start 'Akey' from the Start menu to show the tray icon.",
         "Secrets are stored in %LOCALAPPDATA%\\akey and are kept when you uninstall."
     ],
     "checkver": "github",

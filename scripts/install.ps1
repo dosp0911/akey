@@ -41,7 +41,7 @@ try {
     # 시작 메뉴 바로가기
     $startMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
     $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut((Join-Path $startMenu "akey.lnk"))
+    $shortcut = $shell.CreateShortcut((Join-Path $startMenu "Akey.lnk"))
     $shortcut.TargetPath = Join-Path $InstallDir "akey-app.exe"
     $shortcut.Save()
 

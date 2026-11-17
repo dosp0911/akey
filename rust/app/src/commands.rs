@@ -29,12 +29,16 @@ pub struct Item {
     grant_label: String,
     /// ask | timed | always
     grant_kind: &'static str,
+    /// 묶음(동그라미) 번호 0..GROUP_COUNT
+    group: u8,
 }
 
 #[derive(Serialize)]
 pub struct Snapshot {
     lang: &'static str,
     items: Vec<Item>,
+    /// 묶음 이름 (길이 GROUP_COUNT, 빈 문자열 = 이름 없음)
+    group_names: Vec<String>,
     all_label: Option<String>,
     all_kind: &'static str,
     unlocked: bool,
@@ -61,6 +65,7 @@ pub fn snapshot(state: State<'_, AppState>) -> Snapshot {
         Vec::new()
     });
     let notes = state.store.notes().unwrap_or_default();
+    let groups = state.store.groups().unwrap_or_else(|_| akey_core::Groups::new(&[], Default::default()));
     let items = names
         .into_iter()
         .map(|name| {
@@ -69,6 +74,7 @@ pub fn snapshot(state: State<'_, AppState>) -> Snapshot {
                 note: notes.get(&name).cloned(),
                 grant_label: grants::grant_label(&name, &grants, t),
                 grant_kind: kind(until),
+                group: groups.group_of(&name),
                 name,
             }
         })
@@ -78,6 +84,7 @@ pub fn snapshot(state: State<'_, AppState>) -> Snapshot {
     Snapshot {
         lang: akey_core::i18n::lang().code(),
         items,
+        group_names: groups.names.clone(),
         all_label: grants::all_grant_label(&grants, t),
         all_kind: kind(all_until),
         unlocked: state.is_unlocked(),
@@ -99,6 +106,28 @@ pub async fn reveal(app: AppHandle, state: State<'_, AppState>, name: String) ->
         return Err(cancelled());
     }
     state.store.get(&name).map_err(e)
+}
+
+/// 잠김 배지를 눌렀을 때: 한 번 인증하고 모든 값을 돌려준다 (화면에 한꺼번에 보이기)
+#[tauri::command]
+pub async fn reveal_all(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> CmdResult<std::collections::BTreeMap<String, String>> {
+    let reason = tr(
+        &format!("모든 시크릿 값을 보려고 합니다 ({})", keep_note(&state)),
+        &format!("show all secret values ({})", keep_note(&state)),
+    );
+    if !state.unlock(&app, reason).await {
+        return Err(cancelled());
+    }
+    let mut values = std::collections::BTreeMap::new();
+    for name in state.store.names().map_err(e)? {
+        let value = state.store.get(&name).map_err(e)?;
+        values.insert(name, value);
+    }
+    changed(&app);
+    Ok(values)
 }
 
 #[tauri::command]
@@ -148,7 +177,14 @@ pub fn lock(app: AppHandle, state: State<'_, AppState>) {
 }
 
 #[tauri::command]
-pub async fn add(app: AppHandle, state: State<'_, AppState>, name: String, value: String, note: String) -> CmdResult<String> {
+pub async fn add(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    name: String,
+    value: String,
+    note: String,
+    group: Option<u8>,
+) -> CmdResult<String> {
     let name = name.trim().to_string();
     if !is_valid_name(&name) {
         return Err(tr("이름은 영문/숫자/_ 만 가능합니다", "Names may use letters, digits and _ only"));
@@ -166,6 +202,10 @@ pub async fn add(app: AppHandle, state: State<'_, AppState>, name: String, value
         state.store.set(&name, &value)?;
         if !note.trim().is_empty() {
             state.store.set_note(&name, Some(&note))?;
+        }
+        // 새로 만든 것만 지금 보고 있는 묶음에 넣는다 (덮어쓸 때는 원래 묶음 유지)
+        if let (false, Some(g)) = (exists, group) {
+            state.store.set_group(&name, g)?;
         }
         Ok::<_, Error>(())
     })();
@@ -233,6 +273,21 @@ pub async fn remove(app: AppHandle, state: State<'_, AppState>, name: String) ->
     result.map_err(e)?;
     changed(&app);
     Ok(tr(&format!("삭제됨: {name}"), &format!("Deleted: {name}")))
+}
+
+/// 시크릿을 다른 묶음(동그라미)으로 옮긴다. 정리일 뿐이라 인증은 묻지 않는다.
+#[tauri::command]
+pub fn set_group(app: AppHandle, state: State<'_, AppState>, name: String, group: u8) -> CmdResult<()> {
+    state.store.set_group(&name, group).map_err(e)?;
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_group_name(app: AppHandle, state: State<'_, AppState>, group: u8, label: String) -> CmdResult<()> {
+    state.store.set_group_name(group, &label).map_err(e)?;
+    changed(&app);
+    Ok(())
 }
 
 fn duration_label(hours: f64) -> String {
@@ -348,7 +403,7 @@ pub fn set_language(app: AppHandle, state: State<'_, AppState>, code: String) ->
     akey_core::i18n::set_lang(lang);
     crate::tray::refresh_menu(&app);
     if let Some(w) = app.get_webview_window("settings") {
-        let _ = w.set_title(&tr("akey 설정", "akey Settings"));
+        let _ = w.set_title(&tr("Akey 설정", "Akey Settings"));
     }
     changed(&app);
     Ok(())
