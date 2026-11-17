@@ -292,11 +292,6 @@ function selectRow(item) {
       el("span", { class: `badge kind-${item.grant_kind}`, text: item.grant_label })));
 }
 
-// 한 줄에 다 안 보이는 값 (길거나 여러 줄)
-function isLong(value) {
-  return value.length > 32 || value.includes("\n");
-}
-
 // JSON 이면 들여쓰기해서 보여 준다 (복사는 항상 원래 값 그대로)
 function prettyValue(value) {
   const v = value.trim();
@@ -333,8 +328,8 @@ function row(item) {
   if (ui.selecting) return selectRow(item);
   const revealed = ui.revealed.has(item.name);
   const value = revealed ? ui.revealed.get(item.name) : "••••••••";
-  const long = revealed && isLong(value);
-  const expanded = long && ui.expanded.has(item.name);
+  // 보이는 값은 길이와 상관없이 모두 펼쳐 볼 수 있다 (좁은 칸에서 잘리므로)
+  const expanded = revealed && ui.expanded.has(item.name);
   const badge = el("button", {
     class: `badge kind-${item.grant_kind}`, title: t("grantHelp"),
     "aria-haspopup": "menu", "aria-expanded": ui.menuFor === item.name ? "true" : "false",
@@ -353,7 +348,7 @@ function row(item) {
       onclick: () => toggleReveal(item.name) }),
     anchor,
     el("div", { class: "actions" },
-      long ? iconButton(expanded ? "collapse" : "expand", expanded ? t("collapseValue") : t("expandValue"), () => {
+      revealed ? iconButton(expanded ? "collapse" : "expand", expanded ? t("collapseValue") : t("expandValue"), () => {
         expanded ? ui.expanded.delete(item.name) : ui.expanded.add(item.name);
         render();
       }, expanded ? "active" : "") : null,
