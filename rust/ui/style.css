@@ -164,6 +164,31 @@ input.group-name-input { flex: 0 1 200px; height: 22px; font-size: 12px; }
 .row.revealed .value { color: var(--text); -webkit-user-select: text; user-select: text; }
 
 .actions { display: flex; flex: none; }
+
+/* 긴 값 펼쳐 보기 (JSON 은 들여쓰기) */
+.full-value {
+  position: relative; margin-left: 11px; border-radius: 7px;
+  background: var(--field-bg); border: 1px solid var(--field-border);
+}
+.full-value pre {
+  margin: 0; padding: 8px 10px; max-height: 220px; overflow: auto;
+  font: 12px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere;
+  -webkit-user-select: text; user-select: text; cursor: text;
+}
+.full-value .kind {
+  position: absolute; top: 5px; right: 8px; font-size: 10px; font-weight: 600;
+  color: var(--secondary); letter-spacing: .04em;
+}
+
+/* 값 입력칸 (여러 줄 가능, 글자는 가림) */
+textarea.secret {
+  flex: 1; min-width: 0; min-height: 24px; padding: 3px 7px; resize: none; overflow-y: auto;
+  border: 1px solid var(--field-border); border-radius: 5px; background: var(--field-bg);
+  font: inherit; line-height: 16px; color: var(--text); outline: none;
+  -webkit-text-security: disc; -webkit-user-select: text; user-select: text;
+}
+textarea.secret:placeholder-shown { -webkit-text-security: none; }
+textarea.secret:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px color-mix(in srgb, var(--indigo) 18%, transparent); }
 .icon-btn {
   width: 22px; height: 22px; padding: 0; border: none; background: none;
   display: inline-flex; align-items: center; justify-content: center;
@@ -194,8 +219,8 @@ input.group-name-input { flex: 0 1 200px; height: 22px; font-size: 12px; }
 
 /* 수정 패널 */
 .edit { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 0 11px; }
-.edit .line { display: flex; align-items: center; gap: 6px; }
-.edit .line > span { width: 40px; flex: none; }
+.edit .line { display: flex; align-items: flex-start; gap: 6px; }
+.edit .line > span { width: 40px; flex: none; line-height: 24px; }
 .edit .hint { font-size: 11px; color: var(--secondary); }
 
 input[type="text"], input[type="password"] {
@@ -217,7 +242,7 @@ input.mono { font-family: var(--mono); }
 .add { padding: 10px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--indigo) 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
 .add .label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--indigo); }
 .add .label svg { width: 13px; height: 13px; }
-.add .line { display: flex; gap: 6px; align-items: center; }
+.add .line { display: flex; gap: 6px; align-items: flex-start; }
 .add .line input.name { flex: none; width: 150px; }
 
 /* 바닥글 */

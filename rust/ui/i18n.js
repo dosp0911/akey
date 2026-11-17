@@ -19,6 +19,8 @@ const STRINGS = {
   clickToHide: ["눌러서 값 숨기기", "Click to hide"],
   showValue: ["값 보기", "Show value"],
   hideValue: ["값 숨기기", "Hide value"],
+  expandValue: ["값 전체 보기", "Show the whole value"],
+  collapseValue: ["접기", "Collapse"],
   copy: ["복사", "Copy"],
   edit: ["수정 (이름·값·메모)", "Edit (name, value, note)"],
   remove: ["삭제", "Delete"],

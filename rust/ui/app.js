@@ -13,6 +13,7 @@ invoke("debug_log", { message: "app.js loaded" });
 const ui = {
   snap: null,
   revealed: new Map(),   // 이름 → 값 (창을 닫으면 비움)
+  expanded: new Set(),   // 긴 값을 펼쳐 보는 이름
   editing: null,         // 수정 중인 이름
   draft: { name: "", value: "", note: "" },
   add: { name: "", value: "", note: "" },
@@ -76,6 +77,7 @@ async function refresh() {
   // 지워지거나 이름이 바뀐 항목의 보이던 값은 버린다
   const names = new Set(ui.snap.items.map((i) => i.name));
   for (const n of [...ui.revealed.keys()]) if (!names.has(n)) ui.revealed.delete(n);
+  for (const n of [...ui.expanded]) if (!ui.revealed.has(n)) ui.expanded.delete(n);
   if (ui.editing && !names.has(ui.editing)) ui.editing = null;
   for (const n of [...ui.selected]) if (!names.has(n)) ui.selected.delete(n);
   render();
@@ -84,6 +86,7 @@ async function refresh() {
 async function toggleReveal(name) {
   if (ui.revealed.has(name)) {
     ui.revealed.delete(name);
+    ui.expanded.delete(name);
     render();
     return;
   }
@@ -258,8 +261,7 @@ function editPanel(item) {
   };
   const nameInput = el("input", { type: "text", class: "mono", value: d.name, placeholder: "NAME", spellcheck: "false",
     oninput: (e) => { d.name = e.target.value; saveBtn.disabled = !d.name.trim(); } });
-  const valueInput = el("input", { type: "password", value: d.value, placeholder: t("newValuePlaceholder"),
-    oninput: (e) => { d.value = e.target.value; } });
+  const valueInput = secretInput(d.value, t("newValuePlaceholder"), (e) => { d.value = e.target.value; });
   const noteInput = el("input", { type: "text", value: d.note, placeholder: t("notePlaceholder"),
     oninput: (e) => { d.note = e.target.value; }, onkeydown: (e) => { if (e.key === "Enter") save(); } });
   const saveBtn = el("button", { class: "btn primary", text: t("save"), onclick: save, disabled: !d.name.trim() });
@@ -290,10 +292,49 @@ function selectRow(item) {
       el("span", { class: `badge kind-${item.grant_kind}`, text: item.grant_label })));
 }
 
+// 한 줄에 다 안 보이는 값 (길거나 여러 줄)
+function isLong(value) {
+  return value.length > 32 || value.includes("\n");
+}
+
+// JSON 이면 들여쓰기해서 보여 준다 (복사는 항상 원래 값 그대로)
+function prettyValue(value) {
+  const v = value.trim();
+  if (v.startsWith("{") || v.startsWith("[")) {
+    try { return { text: JSON.stringify(JSON.parse(v), null, 2), json: true }; } catch (_) {}
+  }
+  return { text: value, json: false };
+}
+
+function fullValue(value) {
+  const { text, json } = prettyValue(value);
+  return el("div", { class: "full-value" },
+    json ? el("span", { class: "kind", text: "JSON" }) : null,
+    el("pre", { text }));
+}
+
+// 값 입력칸: 여러 줄(JSON, PEM 등)도 그대로 받는다. 글자는 가려서 보인다
+function secretInput(value, placeholder, oninput) {
+  const box = el("textarea", { class: "secret", rows: "1", placeholder, spellcheck: "false",
+    autocomplete: "off", autocorrect: "off", autocapitalize: "off",
+    oninput: (e) => { grow(e.target); oninput(e); } });
+  box.value = value;
+  requestAnimationFrame(() => grow(box));
+  return box;
+}
+
+function grow(box) {
+  box.style.height = "auto";
+  box.style.height = Math.min(box.scrollHeight + 2, 120) + "px";
+  fit();
+}
+
 function row(item) {
   if (ui.selecting) return selectRow(item);
   const revealed = ui.revealed.has(item.name);
   const value = revealed ? ui.revealed.get(item.name) : "••••••••";
+  const long = revealed && isLong(value);
+  const expanded = long && ui.expanded.has(item.name);
   const badge = el("button", {
     class: `badge kind-${item.grant_kind}`, title: t("grantHelp"),
     "aria-haspopup": "menu", "aria-expanded": ui.menuFor === item.name ? "true" : "false",
@@ -308,10 +349,14 @@ function row(item) {
     el("div", { class: "ident" },
       el("span", { class: "name", title: item.name }, ...breakableName(item.name)),
       item.note ? el("span", { class: "note", text: item.note, title: item.note }) : null),
-    el("button", { class: "value", text: value, title: revealed ? t("clickToHide") : t("clickToShow"),
+    el("button", { class: "value", text: revealed ? value.replace(/\s*\n\s*/g, " ") : value, title: revealed ? t("clickToHide") : t("clickToShow"),
       onclick: () => toggleReveal(item.name) }),
     anchor,
     el("div", { class: "actions" },
+      long ? iconButton(expanded ? "collapse" : "expand", expanded ? t("collapseValue") : t("expandValue"), () => {
+        expanded ? ui.expanded.delete(item.name) : ui.expanded.add(item.name);
+        render();
+      }, expanded ? "active" : "") : null,
       iconButton(revealed ? "eyeSlash" : "eye", revealed ? t("hideValue") : t("showValue"),
         () => toggleReveal(item.name), `eye ${revealed ? "active" : ""}`),
       iconButton("copy", t("copy"), async () => { await call("copy", { name: item.name }); await refresh(); }),
@@ -327,7 +372,7 @@ function row(item) {
       }, "danger")));
 
   return el("div", { class: `row ${revealed ? "revealed" : ""}` },
-    main, ui.editing === item.name ? editPanel(item) : null);
+    main, expanded ? fullValue(value) : null, ui.editing === item.name ? editPanel(item) : null);
 }
 
 function addCard() {
@@ -345,8 +390,7 @@ function addCard() {
     el("div", { class: "line" },
       el("input", { type: "text", class: "mono name", placeholder: "NAME", value: a.name, spellcheck: "false",
         oninput: (e) => { a.name = e.target.value; update(); } }),
-      el("input", { type: "password", placeholder: t("value"), value: a.value,
-        oninput: (e) => { a.value = e.target.value; update(); } })),
+      secretInput(a.value, t("value"), (e) => { a.value = e.target.value; update(); })),
     el("div", { class: "line" },
       el("input", { type: "text", placeholder: t("noteOptional"), value: a.note,
         oninput: (e) => { a.note = e.target.value; },
@@ -397,7 +441,8 @@ function render() {
   if (!s) return;
   // 입력 중인 칸의 포커스와 커서를 다시 그린 뒤에도 유지
   const active = document.activeElement;
-  const focusKey = active && active.tagName === "INPUT" ? [...document.querySelectorAll("input")].indexOf(active) : -1;
+  const fields = () => [...document.querySelectorAll("input, textarea")];
+  const focusKey = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") ? fields().indexOf(active) : -1;
   const caret = focusKey >= 0 ? active.selectionStart : null;
 
   const items = visibleItems();
@@ -413,7 +458,7 @@ function render() {
   document.getElementById("root").replaceChildren(...parts);
 
   if (focusKey >= 0) {
-    const input = document.querySelectorAll("input")[focusKey];
+    const input = fields()[focusKey];
     if (input) { input.focus(); try { input.setSelectionRange(caret, caret); } catch (_) {} }
   }
   fit();
@@ -444,6 +489,7 @@ listen("akey://changed", refresh);
 listen("akey://hidden", () => {
   // 창을 닫으면 보이던 값과 수정 중인 값은 지운다
   ui.revealed.clear();
+  ui.expanded.clear();
   ui.editing = null;
   ui.draft = { name: "", value: "", note: "" };
   ui.menuFor = null;
