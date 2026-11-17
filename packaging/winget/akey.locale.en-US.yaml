@@ -7,7 +7,7 @@ PublisherUrl: https://github.com/__OWNER__
 PackageName: Akey
 PackageUrl: https://github.com/__OWNER__/akey
 License: MIT
-ShortDescription: Local secret store for AI coding agents (tray app + CLI, Windows Hello)
+ShortDescription: Agent key - local secret store for AI coding agents (tray app + CLI, Windows Hello)
 Description: |-
   akey keeps API keys and tokens used by AI coding agents out of files.
   Values are protected with DPAPI and Windows Hello, and agents receive them only as

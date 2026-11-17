@@ -1,5 +1,7 @@
 # Akey
 
+**Akey** stands for **Agent key**: the keys your AI agents use, kept in one safe place.
+
 **English** | [한국어](README.ko.md) | [简体中文](README.zh-CN.md)
 
 A small menu bar (tray) app and CLI that keeps the API keys and tokens used by AI coding agents (Claude Code, Codex, Cursor and others) **out of files**, in your computer's secure storage.

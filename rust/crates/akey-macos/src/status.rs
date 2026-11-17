@@ -388,12 +388,19 @@ pub fn wake_event_loop() {
 }
 
 /// 표준 "정보" 창
-pub fn show_about() {
+/// 정보 창. credits: 이름 아래에 보일 설명 (예: "Agent key: …")
+pub fn show_about(credits: &str) {
+    use objc2::runtime::AnyObject;
+    use objc2_app_kit::NSAboutPanelOptionCredits;
+    use objc2_foundation::{NSAttributedString, NSDictionary};
     if let Some(mtm) = MainThreadMarker::new() {
         let app = NSApplication::sharedApplication(mtm);
         #[allow(deprecated)]
         app.activateIgnoringOtherApps(true);
-        app.orderFrontStandardAboutPanel(None);
+        let text = NSAttributedString::from_nsstring(&NSString::from_str(credits));
+        let value: &AnyObject = &text;
+        let options = NSDictionary::from_slices(&[unsafe { NSAboutPanelOptionCredits }], &[value]);
+        unsafe { app.orderFrontStandardAboutPanelWithOptions(&options) };
     }
 }
 

@@ -1,5 +1,7 @@
 # Akey
 
+**Akey**는 **Agent key**(에이전트 키)의 줄임말이다. AI 에이전트가 쓰는 키를 한곳에 안전하게 보관한다.
+
 [English](README.md) | **한국어** | [简体中文](README.zh-CN.md)
 
 AI 코딩 에이전트(Claude Code, Codex, Cursor 등)가 쓰는 API 키와 토큰을 **파일에 두지 않고** 이 컴퓨터의 안전한 저장소에 보관하는 작은 메뉴바(트레이) 앱 + CLI.

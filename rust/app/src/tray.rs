@@ -38,7 +38,10 @@ mod imp {
                         (MENU_QUIT, tr("종료", "Quit")),
                     ]);
                 }
-                StatusEvent::MenuItem(MENU_ABOUT) => status::show_about(),
+                StatusEvent::MenuItem(MENU_ABOUT) => status::show_about(&tr(
+                    "Agent key: AI 에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
+                    "Agent key: a local secret store for AI agents.\nValues are kept only on this computer.",
+                )),
                 StatusEvent::MenuItem(MENU_SETTINGS) => crate::app::open_settings(&handle),
                 StatusEvent::MenuItem(MENU_QUIT) => handle.exit(0),
                 StatusEvent::MenuItem(_) => {}
@@ -70,8 +73,8 @@ mod imp {
                 name: Some("Akey".into()),
                 version: Some(app.package_info().version.to_string()),
                 comments: Some(tr(
-                    "에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
-                    "A local secret store for AI agents.\nValues are kept only on this computer.",
+                    "Agent key: AI 에이전트용 로컬 시크릿 저장소.\n값은 이 컴퓨터에만 저장됩니다.",
+                    "Agent key: a local secret store for AI agents.\nValues are kept only on this computer.",
                 )),
                 ..Default::default()
             }),

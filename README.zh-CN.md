@@ -1,5 +1,7 @@
 # Akey
 
+**Akey** 是 **Agent key**（助手密钥）的缩写：把 AI 助手使用的密钥安全地集中保管。
+
 [English](README.md) | [한국어](README.ko.md) | **简体中文**
 
 一个小巧的菜单栏（托盘）应用和命令行工具。它把 AI 编程助手（Claude Code、Codex、Cursor 等）使用的 API 密钥和令牌**从文件中移出**，保存在本机的安全存储里。

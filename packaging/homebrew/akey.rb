@@ -9,7 +9,7 @@ cask "akey" do
 
   url "https://github.com/__OWNER__/akey/releases/download/v#{version}/akey-macos-universal.tar.gz"
   name "Akey"
-  desc "Local secret store for AI agents (menu bar app + CLI, Touch ID)"
+  desc "Agent key: local secret store for AI agents (menu bar app + CLI, Touch ID)"
   homepage "https://github.com/__OWNER__/akey"
 
   depends_on macos: :ventura
