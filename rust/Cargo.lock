@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "akey-app"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "akey-cli",
  "akey-core",
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "akey-cli"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "akey-core",
  "akey-macos",
@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "akey-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "dirs 6.0.0",
  "serde",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "akey-macos"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "akey-core",
  "block2",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "akey-windows"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "aes-gcm",
  "akey-core",
