@@ -273,3 +273,18 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--indigo);
 .select-hint { font-size: 11px; color: var(--secondary); padding: 0 2px; }
 .selection-bar { gap: 8px; }
 .selection-bar .count { font-size: 12px; color: var(--secondary); }
+
+/* 복사됨 알림: 아래 가운데에 잠깐 떴다 사라진다 */
+#toast {
+  position: fixed; left: 50%; bottom: 52px; z-index: 50;
+  display: flex; align-items: center; gap: 6px; max-width: calc(100% - 32px);
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  opacity: 0; transform: translate(-50%, 6px); pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#toast svg { width: 13px; height: 13px; flex: none; color: var(--green); }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }

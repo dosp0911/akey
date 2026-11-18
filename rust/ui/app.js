@@ -58,6 +58,22 @@ function setMessage(text, isError = false) {
   ui.messageIsError = isError;
 }
 
+// 잠깐 떴다 사라지는 알림 (복사됨 등). 창 크기에 영향을 주지 않게 #root 바깥에 둔다
+let toastTimer;
+function toast(text) {
+  let box = document.getElementById("toast");
+  if (!box) {
+    box = el("div", { id: "toast", role: "status", "aria-live": "polite" });
+    document.body.append(box);
+  }
+  box.replaceChildren(el("span", { icon: "check" }), el("span", { text }));
+  box.classList.remove("show");
+  void box.offsetWidth; // 연달아 눌러도 다시 나타나게
+  box.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => box.classList.remove("show"), 1400);
+}
+
 async function call(cmd, args) {
   try {
     const result = await invoke(cmd, args);
@@ -354,7 +370,11 @@ function row(item) {
       }, expanded ? "active" : "") : null,
       iconButton(revealed ? "eyeSlash" : "eye", revealed ? t("hideValue") : t("showValue"),
         () => toggleReveal(item.name), `eye ${revealed ? "active" : ""}`),
-      iconButton("copy", t("copy"), async () => { await call("copy", { name: item.name }); await refresh(); }),
+      iconButton("copy", t("copy"), async () => {
+        const { ok, result } = await callQuiet("copy", { name: item.name });
+        if (ok) { setMessage(""); toast(result); }
+        await refresh();
+      }),
       iconButton("pencil", t("edit"), () => {
         if (ui.editing === item.name) { ui.editing = null; ui.draft.value = ""; }
         else { ui.editing = item.name; ui.draft = { name: item.name, value: "", note: item.note || "" }; }
@@ -405,8 +425,8 @@ function selectionBar() {
   const copy = async () => {
     // 검색으로 가려진 것도 고른 것은 포함한다 (목록 순서대로)
     const chosen = ui.snap.items.map((i) => i.name).filter((n) => ui.selected.has(n));
-    const { ok } = await call("copy_many", { names: chosen });
-    if (ok) exitSelecting();
+    const { ok, result } = await callQuiet("copy_many", { names: chosen });
+    if (ok) { setMessage(""); toast(result); exitSelecting(); }
     await refresh();
   };
   return el("div", { class: "footer selection-bar" },

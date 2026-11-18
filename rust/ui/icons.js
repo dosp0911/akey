@@ -8,6 +8,7 @@ export const ICONS = {
   cpu: `<svg viewBox="0 0 12 12" ${S}><rect x="3" y="3" width="6" height="6" rx="1"/><path d="M4.5 1v2M7.5 1v2M4.5 9v2M7.5 9v2M1 4.5h2M1 7.5h2M9 4.5h2M9 7.5h2"/></svg>`,
   eye: `<svg viewBox="0 0 16 16" ${S}><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>`,
   eyeSlash: `<svg viewBox="0 0 16 16" ${S}><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/><path d="M2.5 13.5l11-11"/></svg>`,
+  check: `<svg viewBox="0 0 16 16" ${S}><path d="M3.5 8.4l3 3 6-6.8"/></svg>`,
   copy: `<svg viewBox="0 0 16 16" ${S}><rect x="5" y="5" width="8.5" height="8.5" rx="1.6"/><path d="M11 5V3.6A1.1 1.1 0 0 0 9.9 2.5H3.6A1.1 1.1 0 0 0 2.5 3.6v6.3A1.1 1.1 0 0 0 3.6 11H5"/></svg>`,
   pencil: `<svg viewBox="0 0 16 16" ${S}><path d="M10.5 2.8l2.7 2.7L6 12.7l-3.2.5.5-3.2z"/><path d="M2.5 14.5h11"/></svg>`,
   trash: `<svg viewBox="0 0 16 16" ${S}><path d="M2.5 4h11M6 4V2.8h4V4M4 4l.7 9.2h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg>`,
