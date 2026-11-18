@@ -1,7 +1,7 @@
 //! Tauri 앱 조립: 플러그인, 트레이, 팝오버 창 동작, 설정 창
 
 use akey_core::tr;
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_positioner::{Position, WindowExt};
 
@@ -50,24 +50,13 @@ pub fn run() {
 
             crate::tray::create(app.handle())?;
 
+            // 전체 화면 앱이 있는 화면에서도 뜨게 (macOS).
+            // 바깥을 눌러도 숨기지 않는다: 메뉴바 아이콘이나 Esc 로만 닫는다 (검색어 등이 남도록)
+            #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                // 전체 화면 앱이 있는 화면에서도 뜨게 (macOS)
-                #[cfg(target_os = "macos")]
                 if let Ok(ptr) = window.ns_window() {
                     unsafe { akey_macos::status::make_popover_panel(ptr) };
                 }
-                let handle = app.handle().clone();
-                window.on_window_event(move |event| {
-                    // 바깥을 누르면 숨긴다 (인증 창이 떠 있는 동안은 제외)
-                    if let WindowEvent::Focused(focused) = event {
-                        debug(&format!("focused={focused}"));
-                        let state = handle.state::<AppState>();
-                        // 막 띄운 직후의 포커스 변화(앱 활성화 과정)는 무시한다
-                        if !focused && !state.is_authenticating() && !state.shown_just_now() {
-                            hide_popover(&handle);
-                        }
-                    }
-                });
             }
 
             app.state::<AppState>().store.maintain();
@@ -129,7 +118,6 @@ pub fn wake() {
 fn show_popover_now(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else { return };
     debug("show_popover");
-    app.state::<AppState>().mark_shown();
     let _ = app.emit(EVENT_CHANGED, ());
     // macOS: 활성화하지 않는 패널을 누른 아이콘 아래에 놓고 앞으로 꺼낸다.
     // 앱을 활성화하면 다른 Space 로 넘어가거나, 전체 화면 앱이 있는 화면에서는 창이 안 보일 수 있다.
@@ -162,7 +150,6 @@ pub fn hide_popover(app: &AppHandle) {
     debug("hide_popover");
     if window.is_visible().unwrap_or(false) {
         let _ = window.hide();
-        app.state::<AppState>().mark_hidden();
         // 창을 닫으면 보이던 값은 다시 가린다 (잠금 해제 시간은 유지)
         let _ = app.emit(EVENT_HIDDEN, ());
     }
@@ -170,15 +157,10 @@ pub fn hide_popover(app: &AppHandle) {
 
 pub fn toggle_popover(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else { return };
-    debug(&format!(
-        "toggle visible={:?} hidden_just_now={}",
-        window.is_visible(),
-        app.state::<AppState>().hidden_just_now()
-    ));
+    debug(&format!("toggle visible={:?}", window.is_visible()));
     if window.is_visible().unwrap_or(false) {
         hide_popover(app);
-    } else if !app.state::<AppState>().hidden_just_now() {
-        // 방금 바깥 클릭(=이 트레이 클릭)으로 숨겨졌다면 다시 열지 않는다
+    } else {
         show_popover(app);
     }
 }

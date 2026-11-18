@@ -20,12 +20,6 @@ pub struct AppState {
 struct Inner {
     unlocked_until: Option<Instant>,
     settings: Settings,
-    /// 인증 창이 떠 있는 동안에는 팝오버가 포커스를 잃어도 숨기지 않는다
-    authenticating: bool,
-    /// 바깥을 눌러 숨긴 직후 트레이 클릭이 다시 여는 것을 막는다
-    last_hidden: Option<Instant>,
-    /// 막 띄운 직후의 포커스 변화로 바로 숨기지 않게 한다
-    last_shown: Option<Instant>,
 }
 
 impl AppState {
@@ -35,9 +29,6 @@ impl AppState {
             inner: Mutex::new(Inner {
                 unlocked_until: None,
                 settings: Settings::load(),
-                authenticating: false,
-                last_hidden: None,
-                last_shown: None,
             }),
         }
     }
@@ -72,29 +63,8 @@ impl AppState {
         self.store.lock();
     }
 
-    pub fn is_authenticating(&self) -> bool {
-        self.inner().authenticating
-    }
-
-    pub fn mark_hidden(&self) {
-        self.inner().last_hidden = Some(Instant::now());
-    }
-
-    pub fn mark_shown(&self) {
-        self.inner().last_shown = Some(Instant::now());
-    }
-
-    pub fn shown_just_now(&self) -> bool {
-        matches!(self.inner().last_shown, Some(t) if t.elapsed() < Duration::from_millis(500))
-    }
-
-    pub fn hidden_just_now(&self) -> bool {
-        matches!(self.inner().last_hidden, Some(t) if t.elapsed() < Duration::from_millis(300))
-    }
-
     /// 인증 창을 띄운다. 앱을 앞으로 꺼낸 뒤(Touch ID 가 뜨게) 다른 스레드에서 기다린다.
     pub async fn authenticate(&self, app: &AppHandle, reason: String) -> bool {
-        self.inner().authenticating = true;
         // 인증 창이 닫히면 macOS 가 이전에 쓰던 앱으로 포커스를 돌려, akey 창(특히 설정 창)이
         // 뒤로 사라진 것처럼 보였다. 앞에 있던 akey 창을 기억했다가 인증 뒤 다시 앞으로 꺼낸다.
         let front = ["settings", "main"].into_iter().find(|label| {
@@ -113,7 +83,6 @@ impl AppState {
         let store = self.store.clone();
         let ok = tauri::async_runtime::spawn_blocking(move || store.authenticate(&reason)).await.unwrap_or(false);
 
-        self.inner().authenticating = false;
         match front {
             Some("settings") => {
                 if let Some(window) = app.get_webview_window("settings") {
