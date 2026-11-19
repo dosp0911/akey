@@ -5,21 +5,25 @@ pub mod mask;
 use std::io::{IsTerminal, Read, Write};
 
 use akey_core::grants::{self, now};
-use akey_core::{is_valid_name, tr, Error, SecretStore};
+use akey_core::{is_valid_name, tr, Error, Groups, SecretStore, GROUP_COUNT};
 
 pub const EXIT_DENIED: i32 = 77;
 
 pub fn usage() -> String {
     tr(
         "사용법:
-  akey list                         이름, 허용 상태, 메모 (값은 표시 안 함)
+  akey list [--group G]             이름, 허용 상태, 메모를 묶음별로 (값은 표시 안 함)
   akey exec NAME... -- CMD...       환경변수로 주입해 CMD 실행 (에이전트 권장, 출력의 값은 ***)
   akey get NAME                     값 출력
-  akey set NAME [--note 메모]       저장/수정 (값은 숨김 입력 또는 stdin)
+  akey set NAME [--note 메모] [--group G]
+                                    저장/수정 (값은 숨김 입력 또는 stdin)
   akey note NAME [메모]             메모 보기 / 메모 쓰기 (쓰기는 인증)
   akey note NAME --clear            메모 지우기
   akey rm NAME                      삭제
   akey mv OLD NEW                   이름 바꾸기 (값·메모·허용 유지)
+  akey group NAME G                 다른 묶음으로 옮기기
+  akey groups                       묶음 목록 (번호, 이름, 개수)
+  akey groups G 이름|--clear        묶음 이름 바꾸기 / 지우기
   akey allow NAME [--hours N]       인증 없이 읽기 허용 (N 생략 시 무기한)
   akey allow --all [--hours N]      모든 시크릿(앞으로 추가될 것 포함) 허용
   akey deny NAME                    허용 해제 (다시 매번 묻기)
@@ -27,18 +31,23 @@ pub fn usage() -> String {
 
 get/exec 는 허용되지 않은 시크릿이면 Touch ID·Windows Hello(또는 로그인 비밀번호)를 묻습니다.
 allow, rm, mv, 덮어쓰기, 메모 바꾸기는 항상 인증이 필요합니다.
+G 는 묶음 번호(1-7) 또는 묶음 이름입니다. 묶음 옮기기와 이름 바꾸기는 인증 없이 됩니다.
 새 시크릿 등록(set)은 인증 없이 됩니다. 에이전트는 값을 명령줄에 쓰지 말고 파이프로 넘기세요:
   printf %s \"$VALUE\" | akey set NAME
 출력 언어는 메뉴바(트레이) 아이콘 오른쪽 클릭 → 설정에서 바꿉니다.",
         "Usage:
-  akey list                         names, access and notes (values are never shown)
+  akey list [--group G]             names, access and notes by group (values are never shown)
   akey exec NAME... -- CMD...       run CMD with secrets as env vars (for agents; values in output show as ***)
   akey get NAME                     print a value
-  akey set NAME [--note NOTE]       save or update (hidden prompt or stdin)
+  akey set NAME [--note NOTE] [--group G]
+                                    save or update (hidden prompt or stdin)
   akey note NAME [NOTE]             show / write a note (writing asks)
   akey note NAME --clear            clear a note
   akey rm NAME                      delete
   akey mv OLD NEW                   rename (keeps value, note and access)
+  akey group NAME G                 move to another group
+  akey groups                       list groups (number, name, count)
+  akey groups G NAME|--clear        rename / clear a group name
   akey allow NAME [--hours N]       let agents read without asking (no N = no expiry)
   akey allow --all [--hours N]      allow every secret, including future ones
   akey deny NAME                    revoke (ask every time again)
@@ -46,18 +55,23 @@ allow, rm, mv, 덮어쓰기, 메모 바꾸기는 항상 인증이 필요합니�
 
 get/exec ask for Touch ID / Windows Hello (or your login password) unless the secret is allowed.
 allow, rm, mv, overwriting and changing a note always ask.
+G is a group number (1-7) or a group name. Moving and renaming groups doesn't ask.
 Adding a new secret (set) doesn't ask. Agents should pipe the value, never put it on the command line:
   printf %s \"$VALUE\" | akey set NAME
 Change the output language from the menu bar (tray) icon: right-click → Settings.",
         "用法：
-  akey list                         名称、访问状态和备注（从不显示值）
+  akey list [--group G]             按分组列出名称、访问状态和备注（从不显示值）
   akey exec NAME... -- CMD...       以环境变量注入后运行 CMD（推荐助手使用，输出中的值显示为 ***）
   akey get NAME                     输出值
-  akey set NAME [--note 备注]       保存或更新（隐藏输入或 stdin）
+  akey set NAME [--note 备注] [--group G]
+                                    保存或更新（隐藏输入或 stdin）
   akey note NAME [备注]             查看 / 写入备注（写入需要验证）
   akey note NAME --clear            清除备注
   akey rm NAME                      删除
   akey mv OLD NEW                   重命名（保留值、备注和访问权限）
+  akey group NAME G                 移到其他分组
+  akey groups                       列出分组（编号、名称、数量）
+  akey groups G 名称|--clear        重命名 / 清除分组名称
   akey allow NAME [--hours N]       允许助手无需验证即可读取（省略 N 表示不过期）
   akey allow --all [--hours N]      允许所有密钥（包括以后添加的）
   akey deny NAME                    撤销访问（恢复每次询问）
@@ -65,6 +79,7 @@ Change the output language from the menu bar (tray) icon: right-click → Settin
 
 get/exec 读取未被允许的密钥时会要求 Touch ID / Windows Hello（或登录密码）。
 allow、rm、mv、覆盖和修改备注每次都需要验证。
+G 是分组编号（1-7）或分组名称。移动分组和重命名分组无需验证。
 添加新密钥（set）无需验证。助手应通过管道传入值，不要写在命令行中：
   printf %s \"$VALUE\" | akey set NAME
 输出语言可在菜单栏（托盘）图标上右键 → 设置中更改。",
@@ -102,20 +117,80 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
     let rest: Vec<&str> = args[1..].iter().map(String::as_str).collect();
     match command.as_str() {
         "list" | "ls" => {
+            let only = match rest.as_slice() {
+                [] => None,
+                ["--group", g] => Some(resolve_group(store, g)?),
+                _ => return Ok(bad()),
+            };
             let grants = store.grants();
             let t = now();
             if let Some(all) = grants::all_grant_label(&grants, t) {
                 println!("{}", tr(&format!("# 전체 허용: {all}"), &format!("# All allowed: {all}"), &format!("# 全部允许：{all}")));
             }
             let notes = store.notes()?;
-            for name in store.names()? {
-                let mut line = format!("{name}\t{}", grants::grant_label(&name, &grants, t));
-                if let Some(note) = notes.get(&name) {
-                    line.push('\t');
-                    line.push_str(note);
+            let groups = store.groups()?;
+            let names = store.names()?;
+            // 묶음을 쓰고 있을 때만 묶음별 제목(# 1 이름)을 붙인다. 안 쓰면 예전과 같은 출력
+            let used = groups.names.iter().any(|n| !n.is_empty()) || names.iter().any(|n| groups.group_of(n) != 0);
+            for g in 0..GROUP_COUNT {
+                if only.is_some_and(|o| o != g) {
+                    continue;
                 }
-                println!("{line}");
+                let members: Vec<&String> = names.iter().filter(|n| groups.group_of(n) == g).collect();
+                if only.is_none() && used {
+                    if members.is_empty() {
+                        continue;
+                    }
+                    println!("# {}", group_title(&groups, g));
+                }
+                for name in members {
+                    let mut line = format!("{name}\t{}", grants::grant_label(name, &grants, t));
+                    if let Some(note) = notes.get(name) {
+                        line.push('\t');
+                        line.push_str(note);
+                    }
+                    println!("{line}");
+                }
             }
+            Ok(0)
+        }
+
+        "groups" => {
+            match rest.as_slice() {
+                [] => {
+                    let groups = store.groups()?;
+                    let names = store.names()?;
+                    for g in 0..GROUP_COUNT {
+                        let count = names.iter().filter(|n| groups.group_of(n) == g).count();
+                        println!("{}\t{}\t{count}", g + 1, groups.names[g as usize]);
+                    }
+                }
+                [g, "--clear"] => {
+                    let g = resolve_group(store, g)?;
+                    store.set_group_name(g, "")?;
+                    err(&tr(&format!("묶음 {} 이름 지움", g + 1), &format!("Cleared the name of group {}", g + 1), &format!("已清除分组 {} 的名称", g + 1)));
+                }
+                [g, label @ ..] if !label.is_empty() => {
+                    let g = resolve_group(store, g)?;
+                    let label = label.join(" ");
+                    store.set_group_name(g, &label)?;
+                    let label = store.groups()?.names[g as usize].clone();
+                    err(&tr(&format!("묶음 {}: {label}", g + 1), &format!("Group {}: {label}", g + 1), &format!("分组 {}：{label}", g + 1)));
+                }
+                _ => return Ok(bad()),
+            }
+            Ok(0)
+        }
+
+        "group" => {
+            let [name, g] = rest.as_slice() else { return Ok(bad()) };
+            if !store.exists(name)? {
+                return Err(Error::NotFound(name.to_string()));
+            }
+            let g = resolve_group(store, g)?;
+            store.set_group(name, g)?;
+            let title = group_title(&store.groups()?, g);
+            err(&tr(&format!("{name} → {title}"), &format!("{name} → {title}"), &format!("{name} → {title}")));
             Ok(0)
         }
 
@@ -175,14 +250,24 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
         }
 
         "set" => {
-            if !(rest.len() == 1 || (rest.len() == 3 && rest[1] == "--note")) {
+            let Some((&name, mut options)) = rest.split_first() else { return Ok(bad()) };
+            let (mut note, mut group) = (None, None);
+            while let [flag, v, more @ ..] = options {
+                match *flag {
+                    "--note" if note.is_none() => note = Some(*v),
+                    "--group" if group.is_none() => group = Some(*v),
+                    _ => return Ok(bad()),
+                }
+                options = more;
+            }
+            if !options.is_empty() {
                 return Ok(bad());
             }
-            let name = rest[0];
-            let note = (rest.len() == 3).then(|| rest[2]);
             if !is_valid_name(name) {
                 return Err(Error::InvalidName(name.to_string()));
             }
+            // 값을 묻기 전에 묶음이 맞는지 먼저 확인한다
+            let group = group.map(|g| resolve_group(store, g)).transpose()?;
             if store.exists(name)?
                 && !store.authenticate(&tr(&format!("'{name}' 시크릿을 덮어쓰려고 합니다"), &format!("overwrite '{name}'"), &format!("覆盖 '{name}'")))
             {
@@ -198,6 +283,9 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
             store.set(name, &value)?;
             if let Some(note) = note {
                 store.set_note(name, Some(note))?;
+            }
+            if let Some(g) = group {
+                store.set_group(name, g)?;
             }
             err(&tr(&format!("저장됨: {name}"), &format!("Saved: {name}"), &format!("已保存：{name}")));
             Ok(0)
@@ -313,6 +401,33 @@ fn dispatch(args: &[String], store: &dyn SecretStore) -> Result<i32, Error> {
 }
 
 /// 허용되지 않은 이름이 하나라도 있으면 한 번의 인증으로 묶어서 묻는다.
+/// 묶음 제목: "1 개인" 또는 이름이 없으면 "1"
+fn group_title(groups: &Groups, g: u8) -> String {
+    match groups.names[g as usize].as_str() {
+        "" => format!("{}", g + 1),
+        name => format!("{} {name}", g + 1),
+    }
+}
+
+/// G = 묶음 번호(1-7) 또는 묶음 이름(대소문자 무시). 반환은 0부터 시작하는 번호
+fn resolve_group(store: &dyn SecretStore, g: &str) -> Result<u8, Error> {
+    parse_group(&store.groups()?.names, g).ok_or_else(|| {
+        Error::Backend(tr(
+            &format!("없는 묶음: {g} (1-{GROUP_COUNT} 또는 묶음 이름)"),
+            &format!("no such group: {g} (use 1-{GROUP_COUNT} or a group name)"),
+            &format!("没有这个分组：{g}（请使用 1-{GROUP_COUNT} 或分组名称）"),
+        ))
+    })
+}
+
+fn parse_group(names: &[String], g: &str) -> Option<u8> {
+    if let Ok(n) = g.parse::<u8>() {
+        return (1..=GROUP_COUNT).contains(&n).then(|| n - 1);
+    }
+    let wanted = g.trim().to_lowercase();
+    names.iter().position(|n| !n.is_empty() && n.to_lowercase() == wanted).map(|i| i as u8)
+}
+
 fn authorize_read(store: &dyn SecretStore, names: &[&str]) -> Result<bool, Error> {
     let known = store.names()?;
     for name in names {
@@ -434,4 +549,22 @@ fn ignore_interrupts() {
     }
     #[cfg(windows)]
     akey_windows::ignore_ctrl_c();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_group;
+
+    #[test]
+    fn group_by_number_or_name() {
+        let names: Vec<String> = ["Personal", "", "Work"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(parse_group(&names, "1"), Some(0));
+        assert_eq!(parse_group(&names, "7"), Some(6));
+        assert_eq!(parse_group(&names, "0"), None);
+        assert_eq!(parse_group(&names, "8"), None);
+        assert_eq!(parse_group(&names, "work"), Some(2));
+        assert_eq!(parse_group(&names, " Personal "), Some(0));
+        assert_eq!(parse_group(&names, ""), None);
+        assert_eq!(parse_group(&names, "home"), None);
+    }
 }

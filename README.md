@@ -96,19 +96,24 @@ Values with spaces, quotes, `$`, backticks or line breaks are quoted and escaped
 CLI:
 
 ```text
-akey list                         names, access and notes (values are never shown)
+akey list [--group G]             names, access and notes by group (values are never shown)
 akey exec NAME... -- CMD...       run CMD with secrets as env vars (for agents; values in output show as ***)
 akey get NAME                     print a value
-akey set NAME [--note NOTE]       save or update (hidden prompt or stdin)
+akey set NAME [--note NOTE] [--group G]
+                                  save or update (hidden prompt or stdin)
 akey note NAME [NOTE|--clear]     show / write / clear a note
 akey rm NAME                      delete
 akey mv OLD NEW                   rename (keeps value, note and access)
+akey group NAME G                 move to another group
+akey groups                       list groups (number, name, count)
+akey groups G NAME|--clear        rename / clear a group name
 akey allow NAME|--all [--hours N] let agents read without asking (no N = no expiry)
 akey deny NAME|--all              revoke access
 ```
 
 When akey asks:
-- **Never**: `set` with a new name, `list`, `deny`
+- **Never**: `set` with a new name, `list`, `deny`, `group`, `groups`
+- `G` is a group number (1-7) or a group name.
 - **Only for secrets that aren't allowed**: `get`, `exec`
 - **Always**: `allow`, `rm`, `mv`, overwriting, changing an existing note
 - If authentication is declined, the exit code is `77`.

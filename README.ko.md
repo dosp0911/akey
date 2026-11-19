@@ -96,19 +96,24 @@ GREETING="hello world"
 CLI:
 
 ```text
-akey list                         이름, 허용 상태, 메모 (값은 표시 안 함)
+akey list [--group G]             이름, 허용 상태, 메모를 묶음별로 (값은 표시 안 함)
 akey exec NAME... -- CMD...       환경변수로 주입해 CMD 실행 (에이전트 권장, 출력의 값은 ***)
 akey get NAME                     값 출력
-akey set NAME [--note 메모]       저장/수정 (값은 숨김 입력 또는 stdin)
+akey set NAME [--note 메모] [--group G]
+                                  저장/수정 (값은 숨김 입력 또는 stdin)
 akey note NAME [메모|--clear]     메모 보기/쓰기/지우기
 akey rm NAME                      삭제
 akey mv OLD NEW                   이름 바꾸기 (값·메모·허용 유지)
+akey group NAME G                 다른 묶음으로 옮기기
+akey groups                       묶음 목록 (번호, 이름, 개수)
+akey groups G 이름|--clear        묶음 이름 바꾸기 / 지우기
 akey allow NAME|--all [--hours N] 에이전트가 인증 없이 읽도록 허용 (N 생략 시 무기한)
 akey deny NAME|--all              허용 해제
 ```
 
 인증 규칙:
-- **인증 없음**: 새 이름으로 `set` 하기, `list`, `deny`
+- **인증 없음**: 새 이름으로 `set` 하기, `list`, `deny`, `group`, `groups`
+- `G` 는 묶음 번호(1-7) 또는 묶음 이름입니다.
 - **허용 안 된 시크릿만 인증**: `get`, `exec`
 - **항상 인증**: `allow`, `rm`, `mv`, 덮어쓰기, 기존 메모 바꾸기
 - 인증이 거부되면 종료 코드는 `77`이다.

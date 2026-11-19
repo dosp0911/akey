@@ -96,19 +96,24 @@ GREETING="hello world"
 命令行：
 
 ```text
-akey list                         名称、访问状态和备注（从不显示值）
+akey list [--group G]             按分组列出名称、访问状态和备注（从不显示值）
 akey exec NAME... -- CMD...       以环境变量注入后运行 CMD（推荐助手使用，输出中的值显示为 ***）
 akey get NAME                     输出值
-akey set NAME [--note 备注]       保存或更新（隐藏输入或 stdin）
+akey set NAME [--note 备注] [--group G]
+                                  保存或更新（隐藏输入或 stdin）
 akey note NAME [备注|--clear]     查看 / 写入 / 清除备注
 akey rm NAME                      删除
 akey mv OLD NEW                   重命名（保留值、备注和访问权限）
+akey group NAME G                 移到其他分组
+akey groups                       列出分组（编号、名称、数量）
+akey groups G 名称|--clear        重命名 / 清除分组名称
 akey allow NAME|--all [--hours N] 允许助手无需验证即可读取（省略 N 表示不过期）
 akey deny NAME|--all              撤销访问
 ```
 
 何时需要验证：
-- **从不**：用新名称 `set`、`list`、`deny`
+- **从不**：用新名称 `set`、`list`、`deny`、`group`、`groups`
+- `G` 是分组编号（1-7）或分组名称。
 - **仅针对未被允许的密钥**：`get`、`exec`
 - **每次都要**：`allow`、`rm`、`mv`、覆盖已有的值、修改已有备注
 - 如果验证被拒绝，退出码为 `77`。
