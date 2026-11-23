@@ -51,7 +51,7 @@ html, body {
 button { font: inherit; color: inherit; }
 input { font: inherit; color: var(--text); }
 
-.popover { width: 540px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.popover { width: 100%; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 
 /* 머리글 */
 .header { display: flex; align-items: center; gap: 8px; }
@@ -288,3 +288,20 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--indigo);
 #toast > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #toast svg { width: 13px; height: 13px; flex: none; color: var(--green); }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+/* 직접 정한 크기: 창을 꽉 채우고 목록만 스크롤 */
+html.fixed-size, html.fixed-size body { height: 100%; overflow: hidden; }
+html.fixed-size #root { height: 100%; }
+html.fixed-size #root > * { flex: none; }
+html.fixed-size #root > .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+
+/* 크기 조절 손잡이: 아래 가장자리와 오른쪽 아래 모서리 */
+.resize-bottom { position: fixed; left: 0; right: 16px; bottom: 0; height: 5px; cursor: ns-resize; z-index: 40; }
+.resize-corner {
+  position: fixed; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 41;
+  background:
+    linear-gradient(135deg, transparent 0 55%, var(--secondary) 55% 61%, transparent 61% 72%,
+      var(--secondary) 72% 78%, transparent 78%);
+  opacity: 0.35;
+}
+.resize-corner:hover { opacity: 0.8; }

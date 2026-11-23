@@ -47,6 +47,16 @@ impl AppState {
         inner.settings.save()
     }
 
+    /// 끄는 동안(드래그 중)은 메모리에만 두고, 놓을 때(persist) 파일에 쓴다
+    pub fn set_popover_size(&self, size: Option<akey_core::PopoverSize>, persist: bool) -> std::io::Result<()> {
+        let mut inner = self.inner();
+        inner.settings.popover_size = size;
+        if persist {
+            inner.settings.save()?;
+        }
+        Ok(())
+    }
+
     pub fn is_unlocked(&self) -> bool {
         matches!(self.inner().unlocked_until, Some(t) if t > Instant::now())
     }

@@ -276,13 +276,25 @@ pub unsafe fn place_popover_below_status_item(ns_window: *mut std::ffi::c_void) 
         let button = item.as_ref()?.button(mtm)?;
         let item_window = button.window()?;
         let icon = item_window.frame();
-        let area = item_window.screen().map(|s| s.visibleFrame()).unwrap_or(icon);
+        // 메뉴바가 자동으로 숨겨진 화면에서는 아이콘 창이 화면 위쪽 바깥에 있어 screen() 이 없을 수 있다.
+        // 아이콘 가운데의 가로 위치로 화면을 찾는다
+        let center_x = icon.origin.x + icon.size.width / 2.0;
+        let area = item_window
+            .screen()
+            .or_else(|| {
+                NSScreen::screens(mtm).iter().find(|s| {
+                    let f = s.frame();
+                    center_x >= f.origin.x && center_x < f.origin.x + f.size.width
+                })
+            })
+            .map(|s| s.visibleFrame())
+            .unwrap_or(icon);
         let width = popover.frame().size.width;
-        let x = (icon.origin.x + icon.size.width / 2.0 - width / 2.0)
+        let x = (center_x - width / 2.0)
             .min(area.origin.x + area.size.width - width - 8.0)
             .max(area.origin.x + 8.0);
-        // 아이콘 창의 아래쪽 4pt 밑이 팝오버의 위쪽
-        let top = icon.origin.y - 4.0;
+        // 아이콘 창의 아래쪽 4pt 밑이 팝오버의 위쪽. 단, 화면(메뉴바 아래) 위로는 올라가지 않는다
+        let top = (icon.origin.y - 4.0).min(area.origin.y + area.size.height);
         popover.setFrameTopLeftPoint(NSPoint::new(x, top));
         Some(format!("icon=({},{}) top_left=({x},{top}) screen=({},{} {}x{})",
             icon.origin.x, icon.origin.y, area.origin.x, area.origin.y, area.size.width, area.size.height))
@@ -302,11 +314,23 @@ pub unsafe fn resize_popover_keep_top(ns_window: *mut std::ffi::c_void, width: f
     }
     let w = &*(ns_window as *mut objc2_app_kit::NSWindow);
     let old = w.frame();
+    let top = old.origin.y + old.size.height;
+    // 화면(메뉴바·Dock 제외) 밖으로 나가지 않게: 아래로는 화면 바닥까지, 옆으로는 화면 너비까지
+    let (mut width, mut height) = (width, height);
+    let mut x = old.origin.x;
+    if let Some(screen) = w.screen() {
+        let area = screen.visibleFrame();
+        height = height.min(top - area.origin.y - 8.0).max(120.0);
+        width = width.min(area.size.width - 16.0).max(200.0);
+        x = x.min(area.origin.x + area.size.width - width - 8.0).max(area.origin.x + 8.0);
+    }
     let content = w.contentRectForFrameRect(old);
     let frame_for = w.frameRectForContentRect(NSRect::new(content.origin, NSSize::new(width, height)));
-    let top = old.origin.y + old.size.height;
-    let new = NSRect::new(NSPoint::new(old.origin.x, top - frame_for.size.height), frame_for.size);
-    if (new.size.height - old.size.height).abs() > 0.5 || (new.size.width - old.size.width).abs() > 0.5 {
+    let new = NSRect::new(NSPoint::new(x, top - frame_for.size.height), frame_for.size);
+    if (new.size.height - old.size.height).abs() > 0.5
+        || (new.size.width - old.size.width).abs() > 0.5
+        || (new.origin.x - old.origin.x).abs() > 0.5
+    {
         w.setFrame_display(new, true);
     }
 }

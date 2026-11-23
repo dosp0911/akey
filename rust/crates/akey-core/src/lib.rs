@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 pub use error::{Error, Result};
 pub use grants::Grants;
 pub use i18n::{tr, Lang};
-pub use settings::Settings;
+pub use settings::{PopoverSize, Settings};
 pub use vault::{is_valid_name, Groups, Vault, ALL_KEY, GROUP_COUNT};
 
 /// 시크릿 저장소. CLI 와 앱은 이 인터페이스만 쓴다.

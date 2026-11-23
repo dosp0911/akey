@@ -89,6 +89,8 @@ async function call(cmd, args) {
 async function refresh() {
   ui.snap = await invoke("snapshot");
   setLang(ui.snap.lang);
+  if (!resizing) setFixedSize(Boolean(ui.snap.popover_size));
+  for (const h of document.querySelectorAll(".resize-bottom, .resize-corner")) h.title = t("resizeHint");
   if (ui.snap.error) setMessage(ui.snap.error, true);
   // 지워지거나 이름이 바뀐 항목의 보이던 값은 버린다
   const names = new Set(ui.snap.items.map((i) => i.name));
@@ -481,6 +483,14 @@ function render() {
 
 let lastHeight = 0;
 function fit() {
+  // 크기를 직접 정해 두었으면 그 크기 그대로 (목록이 안에서 스크롤된다). 창이 아직 그 크기가 아니면 맞춘다
+  if (document.documentElement.classList.contains("fixed-size")) {
+    const size = ui.snap && ui.snap.popover_size;
+    if (!resizing && size && (Math.abs(window.innerWidth - size.width) > 1 || Math.abs(window.innerHeight - size.height) > 1)) {
+      invoke("fit_popover", { height: size.height });
+    }
+    return;
+  }
   requestAnimationFrame(() => {
     const h = Math.ceil(document.getElementById("root").getBoundingClientRect().height);
     if (h && Math.abs(h - lastHeight) > 1) {
@@ -489,6 +499,56 @@ function fit() {
     }
   });
 }
+
+// ---- 마우스로 크기 조절 ----
+// 오른쪽 아래 모서리(너비·높이)와 아래 가장자리(높이)를 끌면 크기가 바뀌고, 놓으면 설정에 저장돼 다음에도 유지된다.
+// 모서리를 두 번 누르면 다시 내용에 맞춘다.
+let resizing = false;
+function setFixedSize(on) {
+  document.documentElement.classList.toggle("fixed-size", on);
+  if (!on) { lastHeight = 0; fit(); }
+}
+
+function resizeHandle(kind) {
+  const handle = el("div", { class: `resize-${kind}`, title: t("resizeHint"), "aria-hidden": "true" });
+  let start = null, frame = 0, next = null;
+  const send = (done) => invoke("resize_popover", { width: next.width, height: next.height, done });
+  handle.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    resizing = true;
+    setFixedSize(true);
+    // 창의 위쪽·왼쪽은 그대로라 창 안 좌표(client)로 계산한다 (screenX 는 여러 모니터에서 어긋남)
+    start = { x: e.clientX, y: e.clientY, width: window.innerWidth, height: window.innerHeight };
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!start) return;
+    next = {
+      width: kind === "corner" ? start.width + (e.clientX - start.x) : start.width,
+      height: start.height + (e.clientY - start.y),
+    };
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; send(false); });
+  });
+  const end = async () => {
+    if (!start) return;
+    start = null;
+    if (frame) { cancelAnimationFrame(frame); frame = 0; }
+    if (next) { await send(true); next = null; }
+    resizing = false;
+    await refresh();
+  };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+  if (kind === "corner") {
+    handle.addEventListener("dblclick", async () => {
+      await invoke("reset_popover_size");
+      await refresh();
+    });
+  }
+  return handle;
+}
+document.body.append(resizeHandle("bottom"), resizeHandle("corner"));
 
 // 메뉴 바깥을 누르면 닫기, Esc 로 팝오버 닫기
 document.addEventListener("click", () => { if (ui.menuFor) { ui.menuFor = null; render(); } });

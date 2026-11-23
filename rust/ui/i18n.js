@@ -8,6 +8,7 @@ const STRINGS = {
   agentOff: ["에이전트: 시크릿별", "Agents: per secret", "助手：按密钥"],
   agent8h: ["에이전트: 8시간 전체", "Agents: all for 8h", "助手：8 小时全部"],
   agentAlways: ["에이전트: 항상 전체", "Agents: all, always", "助手：始终全部"],
+  resizeHint: ["드래그해서 크기 조절 · 두 번 클릭하면 내용에 맞춤", "Drag to resize · double-click to fit the content", "拖动以调整大小 · 双击恢复为适应内容"],
   groupN: ["묶음 {0}", "Group {0}", "分组 {0}"],
   countN: ["{0}개", "{0}", "{0} 个"],
   renameGroup: ["눌러서 묶음 이름 바꾸기", "Click to rename this group", "点击重命名此分组"],

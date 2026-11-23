@@ -44,6 +44,8 @@ pub struct Snapshot {
     unlocked: bool,
     minutes_left: Option<u64>,
     unlock_minutes: u32,
+    /// 사용자가 정한 팝오버 크기 (None = 내용에 맞춤)
+    popover_size: Option<akey_core::PopoverSize>,
     error: Option<String>,
 }
 
@@ -90,6 +92,7 @@ pub fn snapshot(state: State<'_, AppState>) -> Snapshot {
         unlocked: state.is_unlocked(),
         minutes_left: state.minutes_left(),
         unlock_minutes: settings.unlock_minutes,
+        popover_size: settings.popover_size,
         error,
     }
 }
@@ -448,25 +451,48 @@ pub fn open_settings(app: AppHandle) {
     crate::app::open_settings(&app);
 }
 
-/// 팝오버 크기를 내용에 맞춘 뒤 트레이 기준 위치를 다시 잡는다
+/// 팝오버 크기를 내용에 맞춘다. 사용자가 크기를 정해 두었으면 그 크기를 쓴다.
 #[tauri::command]
-pub fn fit_popover(app: AppHandle, height: f64) {
+pub fn fit_popover(app: AppHandle, state: State<'_, AppState>, height: f64) {
+    let (width, height) = match state.settings().popover_size {
+        Some(size) => (size.width, size.height),
+        None => (DEFAULT_POPOVER_WIDTH, height.clamp(160.0, 900.0)),
+    };
+    apply_popover_size(&app, width, height);
+}
+
+/// 마우스로 팝오버 크기를 바꾼다. done = 드래그를 놓음 → 설정 파일에 저장 (다음에도 이 크기)
+#[tauri::command]
+pub fn resize_popover(app: AppHandle, state: State<'_, AppState>, width: f64, height: f64, done: bool) -> CmdResult<()> {
+    let size = akey_core::PopoverSize::clamped(width, height);
+    apply_popover_size(&app, size.width, size.height);
+    state.set_popover_size(Some(size), done).map_err(|err| err.to_string())
+}
+
+/// 크기를 다시 내용에 맞춤으로 (모서리 손잡이 두 번 클릭)
+#[tauri::command]
+pub fn reset_popover_size(state: State<'_, AppState>) -> CmdResult<()> {
+    state.set_popover_size(None, true).map_err(|err| err.to_string())
+}
+
+const DEFAULT_POPOVER_WIDTH: f64 = 540.0;
+
+fn apply_popover_size(app: &AppHandle, width: f64, height: f64) {
     let Some(w) = app.get_webview_window("main") else { return };
-    let height = height.clamp(160.0, 900.0);
-    // macOS: 크기만 바꾸고 위쪽은 제자리 (아이콘 아래 위치는 띄울 때 정한다)
+    // macOS: 크기만 바꾸고 위쪽은 제자리 (아이콘 아래 위치는 띄울 때 정한다). 화면 밖으로는 안 나가게 줄인다
     #[cfg(target_os = "macos")]
     {
         let win = w.clone();
         let _ = w.run_on_main_thread(move || {
             if let Ok(ptr) = win.ns_window() {
-                unsafe { akey_macos::status::resize_popover_keep_top(ptr, 540.0, height) };
+                unsafe { akey_macos::status::resize_popover_keep_top(ptr, width, height) };
             }
         });
         crate::app::wake();
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = w.set_size(tauri::LogicalSize::new(540.0, height));
+        let _ = w.set_size(tauri::LogicalSize::new(width, height));
         crate::app::position_popover(&w);
     }
 }

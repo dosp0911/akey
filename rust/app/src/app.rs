@@ -41,6 +41,8 @@ pub fn run() {
             crate::commands::set_autostart,
             crate::commands::open_settings,
             crate::commands::fit_popover,
+            crate::commands::resize_popover,
+            crate::commands::reset_popover_size,
             crate::commands::hide_popover,
             crate::commands::debug_log,
         ])
