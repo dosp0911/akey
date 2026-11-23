@@ -136,7 +136,7 @@ function visibleItems() {
 
 function searchBox() {
   let composing = false; // 한글 입력 조합 중에는 다시 그리지 않는다
-  const update = (e) => { ui.query = e.target.value; if (!composing) render(); };
+  const update = (e) => { ui.query = e.target.value; scrollToTop = true; if (!composing) render(); };
   return el("label", { class: "search" },
     el("span", { icon: "search" }),
     el("input", { type: "search", id: "search", placeholder: t("searchPlaceholder"), value: ui.query,
@@ -217,6 +217,7 @@ function groupDots() {
     title: `${groupLabel(i)} · ${t("countN", n)}`, "aria-label": groupLabel(i),
     "aria-pressed": i === ui.group ? "true" : "false",
     onclick: () => {
+      scrollToTop = true;
       ui.group = i; ui.query = ""; ui.renamingGroup = false; ui.editing = null; ui.menuFor = null;
       render();
     },
@@ -461,6 +462,10 @@ function render() {
   const fields = () => [...document.querySelectorAll("input, textarea")];
   const focusKey = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") ? fields().indexOf(active) : -1;
   const caret = focusKey >= 0 ? active.selectionStart : null;
+  // 다시 그려도 목록의 스크롤 위치는 그대로
+  const oldList = document.querySelector("#root > .list");
+  listScroll = oldList && !scrollToTop ? oldList.scrollTop : 0;
+  scrollToTop = false;
 
   const items = visibleItems();
   const emptyText = ui.query.trim() ? t("noMatches", ui.query.trim()) : s.items.length ? t("emptyGroup") : t("noSecrets");
@@ -482,6 +487,16 @@ function render() {
 }
 
 let lastHeight = 0;
+let listScroll = 0;
+let scrollToTop = false; // 묶음이나 검색어가 바뀌면 맨 위부터
+// 내용에 맞출 때의 최대 높이: 이보다 길면 목록만 스크롤되고 새 시크릿 칸과 아래 버튼은 그대로 보인다
+const MAX_FIT_HEIGHT = 900;
+
+function restoreListScroll() {
+  const list = document.querySelector("#root > .list");
+  if (list && listScroll) list.scrollTop = listScroll;
+}
+
 function fit() {
   // 크기를 직접 정해 두었으면 그 크기 그대로 (목록이 안에서 스크롤된다). 창이 아직 그 크기가 아니면 맞춘다
   if (document.documentElement.classList.contains("fixed-size")) {
@@ -489,10 +504,21 @@ function fit() {
     if (!resizing && size && (Math.abs(window.innerWidth - size.width) > 1 || Math.abs(window.innerHeight - size.height) > 1)) {
       invoke("fit_popover", { height: size.height });
     }
+    restoreListScroll();
     return;
   }
   requestAnimationFrame(() => {
-    const h = Math.ceil(document.getElementById("root").getBoundingClientRect().height);
+    const root = document.getElementById("root");
+    const list = root.querySelector(".list");
+    let h = Math.ceil(root.getBoundingClientRect().height);
+    const max = Math.min(MAX_FIT_HEIGHT, Math.max(320, window.screen.availHeight - 16));
+    if (list && h > max) {
+      // 넘치는 만큼 목록 높이만 줄인다
+      list.style.maxHeight = `${Math.max(80, list.getBoundingClientRect().height - (h - max))}px`;
+      list.classList.add("capped");
+      h = Math.ceil(root.getBoundingClientRect().height);
+    }
+    restoreListScroll();
     if (h && Math.abs(h - lastHeight) > 1) {
       lastHeight = h;
       invoke("fit_popover", { height: h });
@@ -570,6 +596,7 @@ listen("akey://hidden", () => {
   ui.menuFor = null;
   ui.query = "";
   ui.renamingGroup = false;
+  scrollToTop = true;
   exitSelecting();
   render();
 });

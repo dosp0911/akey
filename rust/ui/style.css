@@ -138,6 +138,8 @@ input.group-name-input { flex: 0 1 200px; height: 22px; font-size: 12px; }
 
 /* 목록 */
 .list { display: flex; flex-direction: column; gap: 6px; }
+/* 내용에 맞춤 모드에서 너무 길면 목록만 스크롤 */
+.list.capped { overflow-y: auto; overflow-x: hidden; }
 .empty { color: var(--secondary); text-align: center; padding: 12px 0; }
 
 .row { padding: 7px 10px; border-radius: 9px; background: var(--card); display: flex; flex-direction: column; gap: 6px; }
